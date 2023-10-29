@@ -3,7 +3,7 @@ use std::{
     collections::{hash_map, HashMap, HashSet},
     option::Option,
 };
-mod types;
+pub mod types;
 use types::*;
 pub enum CacheError {
     Renaming,
