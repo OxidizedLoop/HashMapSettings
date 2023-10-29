@@ -4,23 +4,7 @@ use std::{
     option::Option,
 };
 pub mod types;
-use types::*;
-pub enum CacheError {
-    Renaming,
-    Inserting,
-    Naming,
-}
-pub enum DeepChangeError {
-    Cache(CacheError),
-    NotFound,
-    EmptyVec,
-}
-pub enum InvalidAccountError {
-    Cache(CacheError),
-    ExistingName,
-    WronglyPositionedCache,
-}
-const CACHE: &str = "Cache";
+use types::{constants::*, errors::*};
 trait VecFunctions {
     //functions expected to exist to interact with the Vec
     fn len(&self) -> usize;
@@ -173,7 +157,7 @@ impl Account {
                         Some(error) => match error {
                             DeepChangeError::EmptyVec => {
                                 found_account.rename(new_name).map(DeepChangeError::Cache)
-                            }//base case
+                            } //base case
                             _ => Some(error), //error, impossible/invalid function call
                         },
                         None => None,
@@ -202,9 +186,7 @@ impl Account {
                     match found_account.deep_get(account_names, setting_name) {
                         //recursive call
                         Err(error) => match error {
-                            DeepChangeError::EmptyVec => {
-                                Ok(found_account.get(setting_name))
-                            }//base case
+                            DeepChangeError::EmptyVec => Ok(found_account.get(setting_name)), //base case
                             _ => Err(error), //error, impossible/invalid function call
                         },
                         Ok(value) => Ok(value),
@@ -215,10 +197,10 @@ impl Account {
             }
         }
     }
-    fn get_from_name(&self, name: &str) -> Option<& Account> {
+    fn get_from_name(&self, name: &str) -> Option<&Account> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
-                return Some(& self.accounts[account]);
+                return Some(&self.accounts[account]);
             }
         }
         None
@@ -451,6 +433,63 @@ impl HashmapFunctions for Account {
     fn capacity(&self) -> usize {
         self.settings.capacity()
     }
+}
+
+pub trait Settings
+where
+    Self: Serialize + for<'a> Deserialize<'a>,
+{
+    fn stg(self) -> Stg
+    where
+        Self: Settings,
+    {
+        Stg {
+            value: serde_json::to_string(&self).unwrap(),
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Stg {
+    value: String,
+}
+impl Stg {
+    pub fn new<T: Settings>(value: &T) -> Stg {
+        Stg {
+            value: serde_json::to_string(&value).unwrap(),
+        }
+    }
+    pub fn get(&self) -> &str {
+        &self.value
+    }
+    pub fn unstg<T: Settings>(self) -> T {
+        serde_json::from_str(&self.value).unwrap() //unsafe, can panic
+    }
+    pub fn safe_unstg<T: Settings>(self) -> Result<T, serde_json::Error> {
+        serde_json::from_str(&self.value)
+    }
+}
+#[allow(dead_code)]
+pub fn stg<T>(value: T) -> Stg
+where
+    T: Settings,
+{
+    Stg {
+        value: serde_json::to_string(&value).unwrap(),
+    }
+}
+#[allow(dead_code)]
+pub fn unstg<T>(stg: Stg) -> T
+where
+    T: Settings,
+{
+    serde_json::from_str(stg.get()).unwrap() //unsafe can panic
+}
+#[allow(dead_code)]
+pub fn safe_unstg<T>(stg: Stg) -> Result<T, serde_json::Error>
+where
+    T: Settings,
+{
+    serde_json::from_str(stg.get())
 }
 #[cfg(test)]
 mod tests {

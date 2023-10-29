@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::*;
 
 impl Settings for bool{}
 impl Settings for i32{}
@@ -6,7 +6,7 @@ impl Settings for char{}
 
 mod tests {
     #![allow(unused_imports)]
-    use crate::types::*;
+    use crate::*;
     #[test]
     fn bool_stg_conversion() {
         let bool = true;
