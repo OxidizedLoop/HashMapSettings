@@ -5,22 +5,6 @@ use std::{
 };
 pub mod types;
 use types::{constants::*, errors::*};
-trait VecFunctions {
-    //functions expected to exist to interact with the Vec
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool;
-    fn push(&mut self, account: Account) -> Option<InvalidAccountError>;
-    fn pop(&mut self) -> Option<Account>;
-    fn get_mut(&mut self, index: usize) -> Option<&mut Account>;
-}
-trait HashmapFunctions {
-    //functions expected to exist to interact with the Hashmap
-    fn contains_setting(&self, setting_name: &str) -> bool;
-    fn get(&self, setting_name: &str) -> Option<&Stg>;
-    fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg>;
-    fn all_settings(&self) -> std::collections::hash_map::Keys<'_, String, Stg>;
-    fn capacity(&self) -> usize;
-}
 
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Group {
@@ -50,22 +34,20 @@ impl Group {
     pub fn settings(&self) -> &HashMap<String, Stg> {
         &self.settings
     }
-}
-impl HashmapFunctions for Group {
-    fn contains_setting(&self, setting_name: &str) -> bool {
+    pub fn contains_setting(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
-    fn get(&self, setting_name: &str) -> Option<&Stg> {
+    pub fn get(&self, setting_name: &str) -> Option<&Stg> {
         self.settings.get(setting_name)
     }
-    fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
+    pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
         self.settings
             .insert(setting_name.to_string(), setting_value)
     }
-    fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
+    pub fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
         self.settings.keys()
     }
-    fn capacity(&self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
 }
@@ -339,29 +321,43 @@ impl Account {
             }
         }
     }
-    /*
-        unused functions
-        pub fn all_names(&self) -> Vec<&str> { //what would be the use
-            let mut r_value = vec![self.name()];
-            self.accounts
-                .iter()
-                .map(|a| a.all_names())
-                .for_each(|a| r_value.extend(a));
-            r_value
+    pub fn contains_setting(&self, setting_name: &str) -> bool {
+        self.settings.contains_setting(setting_name)
+    }
+    pub fn get(&self, setting_name: &str) -> Option<&Stg> {
+        if let Some(position) = self.cache_position() {
+            return self.accounts[position].get(setting_name);
         }
-        fn accounts_mut(&mut self) -> &mut Vec<Account> {
-            &mut self.accounts
+        for account in (0..self.len()).rev() {
+            if let Some(value) = self.accounts[account].get(setting_name) {
+                return Some(value);
+            }
         }
-    */
-}
-impl VecFunctions for Account {
-    fn len(&self) -> usize {
+        return self.settings.get(setting_name);
+    }
+    pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
+        let mut return_value = None;
+        if let Some(value) = self.settings.insert(setting_name, setting_value.clone()) {
+            return_value = Some(value);
+        }
+        if self.contains_cache() {
+            self.update_cache_of_setting(setting_name);
+        }
+        return_value
+    }
+    pub fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
+        self.settings.all_settings()
+    }
+    pub fn capacity(&self) -> usize {
+        self.settings.capacity()
+    }
+    pub fn len(&self) -> usize {
         self.accounts.len()
     }
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
+    pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
         if account.name() == CACHE {
             //check if account isn't named Cache
             return Some(InvalidAccountError::Cache(CacheError::Naming));
@@ -384,7 +380,7 @@ impl VecFunctions for Account {
         }
         None
     }
-    fn pop(&mut self) -> std::option::Option<Account> {
+    pub fn pop(&mut self) -> std::option::Option<Account> {
         if let Some(position) = self.cache_position() {
             if position == 0 {
                 return None;
@@ -398,41 +394,24 @@ impl VecFunctions for Account {
             self.accounts.pop()
         }
     }
-    fn get_mut(&mut self, index: usize) -> Option<&mut Account> {
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Account> {
         self.accounts.get_mut(index)
     }
-}
-impl HashmapFunctions for Account {
-    fn contains_setting(&self, setting_name: &str) -> bool {
-        self.settings.contains_setting(setting_name)
-    }
-    fn get(&self, setting_name: &str) -> Option<&Stg> {
-        if let Some(position) = self.cache_position() {
-            return self.accounts[position].get(setting_name);
+
+    /*
+        unused functions
+        pub fn all_names(&self) -> Vec<&str> { //what would be the use
+            let mut r_value = vec![self.name()];
+            self.accounts
+                .iter()
+                .map(|a| a.all_names())
+                .for_each(|a| r_value.extend(a));
+            r_value
         }
-        for account in (0..self.len()).rev() {
-            if let Some(value) = self.accounts[account].get(setting_name) {
-                return Some(value);
-            }
+        fn accounts_mut(&mut self) -> &mut Vec<Account> {
+            &mut self.accounts
         }
-        return self.settings.get(setting_name);
-    }
-    fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
-        let mut return_value = None;
-        if let Some(value) = self.settings.insert(setting_name, setting_value.clone()) {
-            return_value = Some(value);
-        }
-        if self.contains_cache() {
-            self.update_cache_of_setting(setting_name);
-        }
-        return_value
-    }
-    fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
-        self.settings.all_settings()
-    }
-    fn capacity(&self) -> usize {
-        self.settings.capacity()
-    }
+    */
 }
 
 pub trait Settings
