@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap, HashSet},
