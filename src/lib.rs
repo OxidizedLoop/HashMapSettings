@@ -60,6 +60,16 @@ impl Group {
     }
 }
 
+///A struct holding a [`Group`] and a [`Vec`] of other [`Account`]s
+///
+/// The name of an account is the name of the Group it holds
+///[`Group`]contains all settings inside of all sub accounts
+///all sub accounts,need to be uniquely named.
+///len()-1 is the cache if one is created.   
+///
+/// ```
+/// # // todo!() add examples
+/// ```
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     settings: Group,
