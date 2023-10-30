@@ -428,6 +428,15 @@ where
     Self: Serialize + for<'a> Deserialize<'a>,
 {
     ///turns a type implementing [Settings] into a [Stg]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Stg,stg,Settings};
+    /// let bool = true;
+    /// let bool_stg: Stg = bool.stg();
+    /// assert_eq!(bool_stg, stg(bool))
+    /// ```
     fn stg(self) -> Stg
     where
         Self: Settings,
@@ -458,6 +467,15 @@ impl Stg {
     }
 }
 ///turns a type implementing [Settings] into a [Stg]
+///
+/// # Examples
+///
+/// ```
+/// use hashmap_settings::{Stg,stg,Settings};
+/// let bool = true;
+/// let bool_stg: Stg = stg(bool);
+/// assert_eq!(bool_stg, bool.stg())
+/// ```
 #[allow(dead_code)]
 pub fn stg<T>(value: T) -> Stg
 where
