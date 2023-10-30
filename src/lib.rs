@@ -1,8 +1,8 @@
 //! HashMap wrapper for stackable Settings
 //!
-//! By using this crate you are able to store and access all your program settings by calling a single [`Account`] struct regardless of the type that those settings implement.
+//! This crate allows you to store and access all your program settings by calling a single Account struct regardless of the type that those settings implement.
 //!
-//! This crate gives the tools necessary for a developer to create layered settings. This allows users of the application to not only have different settings for different environments, but also have groups of settings that they can easily switch.
+//! This crate gives the tools necessary for a developer to create layered settings. This allows users of the application to not only have different settings for different environments, but also have groups of settings that they can easily swap.
 //!  ```
 //! # // todo!() add examples
 //! ```
