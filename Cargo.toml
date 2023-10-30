@@ -1,7 +1,12 @@
 [package]
 name = "hashmap_settings"
 version = "0.1.0"
+authors = ["OxidizedLoop"]
 edition = "2021"
+description = "HashMap wrapper for layered Settings"
+licence = "MIT OR Apache-2.0"
+repository = "https://github.com/OxidizedLoop/HashMapSettings"
+documentation = "https://docs.rs/hashmap_settings"
 
 [dependencies]
 serde = {version ="1.0", features = ["derive"]}
