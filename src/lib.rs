@@ -9,6 +9,7 @@ use std::{
     collections::{hash_map, HashMap, HashSet},
     option::Option,
 };
+/// module containing types used internally by the crate
 pub mod types;
 use types::{constants::*, errors::*};
 
