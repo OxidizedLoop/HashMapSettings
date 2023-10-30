@@ -446,6 +446,11 @@ where
         }
     }
 }
+/// A intermediate type that [Settings] are converted to.
+///
+/// ```
+/// # // todo!() add examples
+/// ```
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Stg {
     value: String,
