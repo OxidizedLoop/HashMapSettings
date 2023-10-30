@@ -427,6 +427,7 @@ pub trait Settings
 where
     Self: Serialize + for<'a> Deserialize<'a>,
 {
+    ///turns a type implementing [Settings] into a [Stg]
     fn stg(self) -> Stg
     where
         Self: Settings,
@@ -456,6 +457,7 @@ impl Stg {
         serde_json::from_str(&self.value)
     }
 }
+///turns a type implementing [Settings] into a [Stg]
 #[allow(dead_code)]
 pub fn stg<T>(value: T) -> Stg
 where
