@@ -459,6 +459,36 @@ impl Stg {
     pub fn get(&self) -> &str {
         &self.value
     }
+    ///turns a [Stg] into a type implementing [Settings],can [panic!]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Stg,Settings};
+    /// 
+    /// let bool_stg: Stg = true.stg();
+    /// assert_eq!(bool_stg.unstg::<bool>(), true); 
+    /// //here we need to use ::<bool> to specify that want to turn bool_stg into a bool
+    /// ```
+    /// ```
+    /// use hashmap_settings::{Stg,Settings};
+    /// 
+    /// let bool_stg: Stg = true.stg();
+    /// let bool :bool = bool_stg.unstg(); 
+    /// // here we don't as we specific the type annotation when we use :bool
+    /// assert_eq!(bool, true);
+    /// ```
+    ///
+    /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
+    /// Consider using [`crate::Stg::safe_unstg`] as it returns a result type instead.
+    /// ```should_panic
+    /// use hashmap_settings::{Stg,Settings};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// let number :i32 = bool_stg.unstg(); 
+    /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
+    ///
+    /// ```
     pub fn unstg<T: Settings>(self) -> T {
         serde_json::from_str(&self.value).unwrap() //unsafe, can panic
     }
@@ -485,6 +515,35 @@ where
         value: serde_json::to_string(&value).unwrap(),
     }
 }
+///turns a [Stg] into a type implementing [Settings],can [panic!]
+///
+/// # Examples
+///
+/// ```
+/// use hashmap_settings::{Stg,stg,unstg};
+/// 
+/// let bool_stg: Stg = stg(true);
+/// assert_eq!(unstg::<bool>(bool_stg), true); 
+/// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+/// ```
+/// ```
+/// use hashmap_settings::{Stg,stg,unstg};
+///
+/// let bool_stg: Stg = stg(true);
+/// let bool :bool = unstg(bool_stg); 
+/// // here we don't as we specific the type annotation when we use :bool
+/// assert_eq!(bool, true);
+/// ```
+/// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
+/// Consider using [safe_unstg] as it returns a result type instead.
+/// ```should_panic
+/// use hashmap_settings::{Stg,stg,unstg};
+///
+/// let bool_stg: Stg = stg(true);
+/// let number :i32 = unstg(bool_stg); 
+/// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
+///
+/// ```
 #[allow(dead_code)]
 pub fn unstg<T>(stg: Stg) -> T
 where
