@@ -421,6 +421,7 @@ impl Account {
     */
 }
 
+/// Required trait for any type that that will be used as a setting
 pub trait Settings
 where
     Self: Serialize + for<'a> Deserialize<'a>,
