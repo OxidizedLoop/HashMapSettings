@@ -16,7 +16,7 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
-///A named group of settings stored in a [HashMap].
+///A named group of settings stored in a [`HashMap`].
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Group {
     name: String,
@@ -459,7 +459,7 @@ where
         }
     }
 }
-/// A intermediate type that [Settings] are converted to.
+/// A intermediate type that [`Settings`] are converted to.
 ///
 /// ```
 /// # // todo!() add examples
@@ -477,7 +477,7 @@ impl Stg {
     pub fn get(&self) -> &str {
         &self.value
     }
-    ///turns a [Stg] into a type implementing [Settings],can [panic!]
+    ///turns a [`Stg`] into a type implementing [`Settings`],can [`panic!`]
     ///
     /// # Examples
     ///
@@ -510,7 +510,7 @@ impl Stg {
     pub fn unstg<T: Settings>(self) -> T {
         serde_json::from_str(&self.value).unwrap() //unsafe, can panic
     }
-    ///turns a [Stg] into a [Result] type implementing [Settings]
+    ///turns a [`Stg`] into a [`Result`] type implementing [`Settings`]
     ///
     /// ```
     /// # // todo!() add examples
@@ -519,7 +519,7 @@ impl Stg {
         serde_json::from_str(&self.value)
     }
 }
-///turns a type implementing [Settings] into a [Stg]
+///turns a type implementing [`Settings`] into a [`Stg`]
 ///
 /// # Examples
 ///
@@ -538,7 +538,7 @@ where
         value: serde_json::to_string(&value).unwrap(),
     }
 }
-///turns a [Stg] into a type implementing [Settings],can [panic!]
+///turns a [`Stg`] into a type implementing [`Settings`],can [`panic!`]
 ///
 /// # Examples
 ///
