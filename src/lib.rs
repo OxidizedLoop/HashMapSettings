@@ -1,4 +1,4 @@
-//! HashMap wrapper for stackable Settings
+//! HashMap wrapper for layered Settings
 //!
 //! This crate allows you to store and access all your program settings by calling a single Account struct regardless of the type that those settings implement.
 //!
@@ -66,11 +66,11 @@ impl Group {
 ///A struct holding a [`Group`] and a [`Vec`] of other [`Account`]s
 ///
 /// The name of an account is the name of the Group it holds.
-/// 
+///
 ///[`Group`]contains all settings inside of all sub accounts.
-/// 
+///
 ///All sub accounts,need to be uniquely named.
-/// 
+///
 ///len()-1 of the [`Vec`] is the cache if one is created.
 ///
 /// ```
@@ -486,16 +486,16 @@ impl Stg {
     ///
     /// ```
     /// use hashmap_settings::{Stg,Settings};
-    /// 
+    ///
     /// let bool_stg: Stg = true.stg();
-    /// assert_eq!(bool_stg.unstg::<bool>(), true); 
+    /// assert_eq!(bool_stg.unstg::<bool>(), true);
     /// //here we need to use ::<bool> to specify that want to turn bool_stg into a bool
     /// ```
     /// ```
     /// use hashmap_settings::{Stg,Settings};
-    /// 
+    ///
     /// let bool_stg: Stg = true.stg();
-    /// let bool :bool = bool_stg.unstg(); 
+    /// let bool :bool = bool_stg.unstg();
     /// // here we don't as we specific the type annotation when we use :bool
     /// assert_eq!(bool, true);
     /// ```
@@ -506,7 +506,7 @@ impl Stg {
     /// use hashmap_settings::{Stg,Settings};
     ///
     /// let bool_stg: Stg = true.stg();
-    /// let number :i32 = bool_stg.unstg(); 
+    /// let number :i32 = bool_stg.unstg();
     /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
     ///
     /// ```
@@ -517,7 +517,7 @@ impl Stg {
     ///
     /// ```
     /// # // todo!() add examples
-    /// ``` 
+    /// ```
     pub fn safe_unstg<T: Settings>(self) -> Result<T, serde_json::Error> {
         serde_json::from_str(&self.value)
     }
@@ -547,16 +547,16 @@ where
 ///
 /// ```
 /// use hashmap_settings::{Stg,stg,unstg};
-/// 
+///
 /// let bool_stg: Stg = stg(true);
-/// assert_eq!(unstg::<bool>(bool_stg), true); 
+/// assert_eq!(unstg::<bool>(bool_stg), true);
 /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
 /// ```
 /// ```
 /// use hashmap_settings::{Stg,stg,unstg};
 ///
 /// let bool_stg: Stg = stg(true);
-/// let bool :bool = unstg(bool_stg); 
+/// let bool :bool = unstg(bool_stg);
 /// // here we don't as we specific the type annotation when we use :bool
 /// assert_eq!(bool, true);
 /// ```
@@ -566,7 +566,7 @@ where
 /// use hashmap_settings::{Stg,stg,unstg};
 ///
 /// let bool_stg: Stg = stg(true);
-/// let number :i32 = unstg(bool_stg); 
+/// let number :i32 = unstg(bool_stg);
 /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
 ///
 /// ```

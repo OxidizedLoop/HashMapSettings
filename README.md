@@ -1,4 +1,4 @@
-# HashMap wrapper for stackable Settings
+# HashMap wrapper for layered Settings
 
 This crate allows you to store and access all your program settings by calling a single Account struct regardless of the type that those settings implement.
 
