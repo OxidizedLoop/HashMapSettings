@@ -13,6 +13,7 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
+///A named Group of settings stored in a HashMap.
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Group {
     name: String,
