@@ -492,6 +492,11 @@ impl Stg {
     pub fn unstg<T: Settings>(self) -> T {
         serde_json::from_str(&self.value).unwrap() //unsafe, can panic
     }
+    ///turns a [Stg] into a [Result] type implementing [Settings]
+    ///
+    /// ```
+    /// # // todo!() add examples
+    /// ``` 
     pub fn safe_unstg<T: Settings>(self) -> Result<T, serde_json::Error> {
         serde_json::from_str(&self.value)
     }
@@ -551,6 +556,11 @@ where
 {
     serde_json::from_str(stg.get()).unwrap() //unsafe can panic
 }
+///turns a [`Stg`] into a [`Result`] type implementing [`Settings`]
+///
+/// ```
+/// # // todo!() add examples
+/// ```
 #[allow(dead_code)]
 pub fn safe_unstg<T>(stg: Stg) -> Result<T, serde_json::Error>
 where
