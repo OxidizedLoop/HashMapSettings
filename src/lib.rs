@@ -501,7 +501,7 @@ impl Stg {
     /// ```
     ///
     /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
-    /// Consider using [`crate::Stg::safe_unstg`] as it returns a result type instead.
+    /// Consider using [`safe_unstg`](`crate::Stg::safe_unstg`) as it returns a result type instead.
     /// ```should_panic
     /// use hashmap_settings::{Stg,Settings};
     ///
@@ -561,7 +561,7 @@ where
 /// assert_eq!(bool, true);
 /// ```
 /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
-/// Consider using [safe_unstg] as it returns a result type instead.
+/// Consider using [`safe_unstg`] as it returns a result type instead.
 /// ```should_panic
 /// use hashmap_settings::{Stg,stg,unstg};
 ///
