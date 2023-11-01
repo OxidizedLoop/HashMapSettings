@@ -52,6 +52,29 @@ impl Group {
         self.name = new_name.to_string();
         None
     }
+    /// todo!()remove this ///Return a reference to the `HashMap`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,Settings};
+    /// use std::collections::HashMap;
+    /// let mut group : Group = Group::new(
+    ///     "New Group", 
+    ///     HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ])
+    /// );
+    ///
+    /// assert!(group.settings() == 
+    ///     &HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ])
+    /// );
+    ///
+    /// ```
     pub fn settings(&self) -> &HashMap<String, Stg> {
         &self.settings
     }
