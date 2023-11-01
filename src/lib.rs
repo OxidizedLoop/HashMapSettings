@@ -78,7 +78,22 @@ impl Group {
     pub fn settings(&self) -> &HashMap<String, Stg> {
         &self.settings
     }
-    pub fn contains_setting(&self, setting_name: &str) -> bool {
+    /// Returns `true` if the group contains a value for the specified key.
+    /// 
+    /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`Eq`] on the borrowed form must match those for the key type.
+    /// 
+    /// this method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,stg};
+    /// let mut group : Group = Group::new("New group", Default::default());
+    /// group.insert("a small number", stg(42));
+    /// assert_eq!(group.contains_setting("a small number"), true);
+    /// assert_eq!(group.contains_setting("a big number"), false);
+    /// ```
+    pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
     pub fn get(&self, setting_name: &str) -> Option<&Stg> {
@@ -378,8 +393,8 @@ impl Account {
             }
         }
     }
-    pub fn contains_setting(&self, setting_name: &str) -> bool {
-        self.settings.contains_setting(setting_name)
+    pub fn contains_key(&self, setting_name: &str) -> bool {
+        self.settings.contains_key(setting_name)
     }
     pub fn get(&self, setting_name: &str) -> Option<&Stg> {
         if let Some(position) = self.cache_position() {
