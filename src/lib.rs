@@ -29,6 +29,16 @@ impl Group {
             settings,
         }
     }
+    /// Returns the name of the `Group`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group};
+    /// let mut group : Group = Group::new("New group", Default::default());
+    /// 
+    /// assert_eq!(group.name(), "New group");
+    /// ```
     pub fn name(&self) -> &str {
         &self.name
     }
