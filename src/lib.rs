@@ -96,6 +96,23 @@ impl Group {
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
+    /// Returns a reference to the value corresponding to the key.
+    ///
+    /// The key may be any borrowed form of the map's key type, but
+    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
+    /// the key type.
+    /// 
+    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,stg};
+    /// let mut group : Group = Group::new("New group", Default::default());
+    /// group.insert("a small number", stg(42));
+    /// assert_eq!(group.get("a small number"), Some(&stg(42)));
+    /// assert_eq!(group.get("a big number"), None);
+    /// ```
     pub fn get(&self, setting_name: &str) -> Option<&Stg> {
         self.settings.get(setting_name)
     }
