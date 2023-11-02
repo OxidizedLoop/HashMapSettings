@@ -82,7 +82,7 @@ impl Group {
     /// 
     /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`Eq`] on the borrowed form must match those for the key type.
     /// 
-    /// this method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
+    /// This method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
     /// 
     /// # Examples
     ///
