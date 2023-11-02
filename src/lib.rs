@@ -16,7 +16,14 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
-///A named group of settings stored in a [`HashMap`].
+/// A restricted [`HashMap`] with an associated name.
+/// 
+/// Groups are intended to be used internally by [`Account`]'s. This struct will likely go private in the future.
+/// 
+/// Group is a wrapper around [`HashMap<String, Stg>`] and most methods are a direct call to [`HashMap`]'s methods.
+///  
+/// In the current version of the crate the only expected interaction that a developer would have with `Group`
+/// is by creating a new group using [`new`](Group::new) while creating a new [Account].
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Group {
     name: String,
