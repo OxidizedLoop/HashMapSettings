@@ -200,6 +200,20 @@ impl Group {
     pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
         self.settings.keys()
     }
+    /// Returns the number of elements the map can hold without reallocating.
+    ///
+    /// This number is a lower bound; the `HashMap<String, Stg>` might be able to hold
+    /// more, but is guaranteed to be able to hold at least this many.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,stg};
+    /// let mut group : Group = Group::new("New group", HashMap::with_capacity(100));
+    /// assert!(group.capacity() >= 100);
+    /// ```
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
