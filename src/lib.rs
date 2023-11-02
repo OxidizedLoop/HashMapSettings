@@ -169,7 +169,7 @@ impl Group {
         self.settings
             .insert(setting_name.to_string(), setting_value)
     }
-    pub fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
+    pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
         self.settings.keys()
     }
     pub fn capacity(&self) -> usize {
@@ -360,7 +360,7 @@ impl Account {
                 .settings
                 .settings
                 .reserve(self.settings.capacity()); //this assumes that Account.settings contains all settings and isn't empty
-            for setting in self.settings.all_settings() {
+            for setting in self.settings.keys() {
                 //this assumes that Account.settings contains all settings and isn't empty
                 for account in (0..cache_position).rev() {
                     if let Some(value) = self.accounts[account].get(setting) {
@@ -369,7 +369,7 @@ impl Account {
                     } else {
                         self.accounts[cache_position].insert(
                             setting,
-                            self.settings.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .all_settings()
+                            self.settings.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
                         );
                     }
                 }
@@ -441,7 +441,7 @@ impl Account {
         //if a invalid account is pushed it can cause unintended behavior when other functions are called
         if let Some(cache_position) = self.cache_position() {
             self.accounts.insert(cache_position, account.clone());
-            for setting in account.all_settings() {
+            for setting in account.keys() {
                 self.update_cache_of_setting(setting)
             }
         } else {
@@ -483,8 +483,8 @@ impl Account {
         }
         return_value
     }
-    pub fn all_settings(&self) -> hash_map::Keys<'_, String, Stg> {
-        self.settings.all_settings()
+    pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
+        self.settings.keys()
     }
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
@@ -510,7 +510,7 @@ impl Account {
         }
         if let Some(cache_position) = self.cache_position() {
             self.accounts.insert(cache_position, account.clone());
-            for setting in account.all_settings() {
+            for setting in account.keys() {
                 self.update_cache_of_setting(setting)
             }
         } else {
@@ -524,7 +524,7 @@ impl Account {
                 return None;
             }
             let r_value = self.accounts.remove(position - 1);
-            for setting in r_value.all_settings() {
+            for setting in r_value.keys() {
                 self.update_cache_of_setting(setting)
             }
             Some(r_value)
