@@ -76,7 +76,7 @@ impl Group {
         self.name = new_name.to_string();
         None
     }
-    /// todo!()remove this ///Return a reference to the `HashMap`
+    /// Return a reference to the `HashMap`
     ///
     /// # Examples
     ///
