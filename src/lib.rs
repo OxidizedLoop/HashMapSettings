@@ -42,6 +42,30 @@ impl Group {
     pub fn name(&self) -> &str {
         &self.name
     }
+    /// Takes a `&str` and updates the name of the `Group`
+    ///
+    /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group};
+    /// let mut group : Group = Group::new("Old Name", Default::default());
+    ///
+    /// group.rename("New Name");
+    /// assert_eq!(group.name(), "New Name");
+    /// ```
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,types::errors::CacheError};
+    /// let mut group : Group = Group::new("Old Name", Default::default());
+    ///
+    /// assert_eq!(group.name(), "Old Name");
+    ///
+    /// assert!(group.rename("Cache") == Some(CacheError::Naming));
+    /// assert_ne!(group.name(), "Cache");
+    /// assert_eq!(group.name(), "Old Name");
+    /// ```
     pub fn rename(&mut self, new_name: &str) -> Option<CacheError> {
         if self.name() == CACHE {
             return Some(CacheError::Renaming);
