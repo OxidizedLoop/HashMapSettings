@@ -169,6 +169,34 @@ impl Group {
         self.settings
             .insert(setting_name.to_string(), setting_value)
     }
+    /// An iterator visiting all keys in arbitrary order.
+    /// The iterator element type is `&'a String`.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,stg};
+    /// use std::collections::HashMap;
+    /// let mut group : Group = Group::new(
+    ///     "New Group", 
+    ///     HashMap::from([
+    ///         ("int".to_string(),stg(42)),
+    ///         ("bool".to_string(),stg(true)),
+    ///         ("char".to_string(),stg('c')),
+    ///     ])
+    /// );
+    ///
+    /// for key in group.keys() {
+    ///     println!("{key}");
+    /// }
+    /// ```
+    ///
+    /// # Performance
+    ///
+    /// In the current implementation, iterating over keys takes O(capacity) time
+    /// instead of O(len) because it internally visits empty buckets too.
     pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
         self.settings.keys()
     }
