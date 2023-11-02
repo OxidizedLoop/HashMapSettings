@@ -219,6 +219,7 @@ impl Group {
     ///
     /// ```
     /// use hashmap_settings::{Group,stg};
+    /// use std::collections::HashMap;
     /// let mut group : Group = Group::new("New group", HashMap::with_capacity(100));
     /// assert!(group.capacity() >= 100);
     /// ```
