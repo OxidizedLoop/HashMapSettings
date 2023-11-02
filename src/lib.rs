@@ -99,6 +99,31 @@ impl Group {
     pub fn get(&self, setting_name: &str) -> Option<&Stg> {
         self.settings.get(setting_name)
     }
+    /// Inserts a key-value pair into the map.
+    /// 
+    /// If the map did not have this key present, None is returned.
+    /// 
+    /// If the map did have this key present, the value is updated, and the old
+    /// value is returned. The key is not updated, though; this matters for
+    /// types that can be `==` without being identical. See the [module-level
+    /// documentation] for more.
+    ///
+    /// [module-level documentation]: std::collections#insert-and-complex-keys
+    /// 
+    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group,stg};
+    /// let mut group : Group = Group::new("New group", Default::default());
+    /// assert_eq!(group.insert("a small number", stg(1)),None);
+    /// assert_eq!(group.settings().is_empty(), false);
+    /// 
+    /// group.insert("a small number", stg(2));
+    /// assert_eq!(group.insert("a small number", stg(3)), Some(stg(2)));
+    /// assert_eq!(group.settings()[&"a small number".to_string()], stg(3));
+    /// ```
     pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
         self.settings
             .insert(setting_name.to_string(), setting_value)
