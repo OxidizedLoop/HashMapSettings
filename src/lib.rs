@@ -122,8 +122,8 @@ impl Group {
     /// use hashmap_settings::{Group,stg};
     /// let mut group : Group = Group::new("New group", Default::default());
     /// group.insert("a small number", stg(42));
-    /// assert_eq!(group.contains_setting("a small number"), true);
-    /// assert_eq!(group.contains_setting("a big number"), false);
+    /// assert_eq!(group.contains_key("a small number"), true);
+    /// assert_eq!(group.contains_key("a big number"), false);
     /// ```
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
