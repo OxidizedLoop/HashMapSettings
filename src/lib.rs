@@ -23,6 +23,14 @@ pub struct Group {
     settings: HashMap<String, Stg>,
 }
 impl Group {
+    ///Creates a new `Group` from a [`&str`] and a [`HashMap<String, Stg>`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Group};
+    /// let mut group : Group = Group::new("New group", Default::default());
+    /// ```
     pub fn new(name: &str, settings: HashMap<String, Stg>) -> Self {
         Self {
             name: name.to_string(),
