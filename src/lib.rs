@@ -25,7 +25,7 @@ use types::{constants::*, errors::*};
 /// In the current version of the crate the only expected interaction that a developer would have with `Group`
 /// is by creating a new group using [`new`](Group::new) while creating a new [Account].
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct Group {
+struct Group {
     name: String,
     settings: HashMap<String, Stg>,
 }
@@ -259,12 +259,13 @@ pub struct Account {
     //cache must contain all settings at all times if it exists
 }
 impl Account {
-    pub fn new(settings: Group, accounts: Vec<Account>) -> Self {
+    pub fn new(name: &str, settings: HashMap<String, Stg>, accounts: Vec<Account>) -> Self {
         //doesn't check if Account is valid,consider using new_valid instead if it isn
-        Account { settings, accounts }
+        Account { settings: Group{name: name.to_string(),settings,}
+            , accounts }
     }
-    pub fn new_valid(settings: Group, accounts: Vec<Account>) -> Result<Self, InvalidAccountError> {
-        let new_account = Account { settings, accounts };
+    pub fn new_valid(name: &str, settings: HashMap<String, Stg>, accounts: Vec<Account>) -> Result<Self, InvalidAccountError> {
+        let new_account = Account { settings: Group{name: name.to_string(),settings,}, accounts };
         if let Some(error) = new_account.is_invalid() {
             Err(error)
         } else {
@@ -299,8 +300,8 @@ impl Account {
     pub fn name(&self) -> &str {
         self.settings.name()
     }
-    pub fn settings(&self) -> &Group {
-        &self.settings
+    pub fn settings(&self) -> &HashMap<String, Stg> {
+        self.settings.settings()
     }
     pub fn accounts(&self) -> &Vec<Account> {
         &self.accounts
@@ -409,7 +410,7 @@ impl Account {
         if self.name() != CACHE {
             if !self.contains_cache() {
                 self.accounts.push(Account::new(
-                    Group::new(CACHE, Default::default()),
+                    CACHE, Default::default(),
                     Default::default(),
                 ));
             }
