@@ -27,7 +27,7 @@ use types::{constants::*, errors::*};
 /// ```
 /// # // todo!() add examples
 /// ```
-#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Account {
     name: String,
     settings: HashMap<String, Stg>,
@@ -37,25 +37,29 @@ pub struct Account {
     //len()-1 is the cache if one is created.
     //last element of the vec contains the most important setting, the one that will be used by the program.
     //cache must contain all settings at all times if it exists
+    active: bool,
 }
 impl Account {
-    pub fn new(name: &str, settings: HashMap<String, Stg>, accounts: Vec<Account>) -> Self {
+    pub fn new(name: &str, settings: HashMap<String, Stg>, accounts: Vec<Account>,active: bool) -> Self {
         //doesn't check if Account is valid,consider using new_valid instead if it isn
         Account {
             name: name.to_string(),
             settings,
             accounts,
+            active,
         }
     }
     pub fn new_valid(
         name: &str,
         settings: HashMap<String, Stg>,
         accounts: Vec<Account>,
+        active: bool
     ) -> Result<Self, InvalidAccountError> {
         let new_account = Account {
             name: name.to_string(),
             settings,
             accounts,
+            active,
         };
         if let Some(error) = new_account.is_invalid() {
             Err(error)
@@ -94,7 +98,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     ///
     /// assert_eq!(account.name(), "New account");
     /// ```
@@ -114,7 +118,8 @@ impl Account {
     ///         ("int".to_string(),42.stg()),
     ///         ("bool".to_string(),true.stg())
     ///     ]),
-    ///     Default::default()
+    ///     Default::default(),
+    ///     Default::default(),
     /// );
     ///
     /// assert!(account.settings() ==
@@ -131,6 +136,51 @@ impl Account {
     pub fn accounts(&self) -> &Vec<Account> {
         &self.accounts
     }
+    /// Return `true` if the `Account` is active
+    ///
+    /// When not active `Accounts` will be treated as if they were not there when called by some of the parent's `Account` methods.
+    /// 
+    /// When creating an `Account` with [`Default`] active will be `true`.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Settings};
+    /// use std::collections::HashMap;
+    /// let mut account : Account = Account::new("New Account", Default::default(), Default::default(), true);
+    ///
+    /// assert!(account.active());
+    /// account.change_activity(false);
+    /// assert!(!account.active());
+    ///
+    /// ```
+    pub fn active(&self) -> bool{
+        self.active
+    }
+    /// Takes a `bool` and changes the value of active, returns `true` if changes were made.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Settings};
+    /// use std::collections::HashMap;
+    /// let mut account : Account = Account::new("New Account", Default::default(), Default::default(), false);
+    ///
+    /// assert!(!account.active());
+    /// assert_eq!(account.change_activity(true), true);
+    /// assert!(account.active());
+    /// assert_eq!(account.change_activity(true), false);
+    /// assert!(account.active());
+    ///
+    /// ```
+    pub fn change_activity(&mut self,new_active: bool) -> bool{
+        if self.active() == new_active{
+            false
+        } else {
+            self.active = new_active;
+            true
+        }
+    }
     /// Takes a `&str` and updates the name of the `Account`
     ///
     /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
@@ -139,7 +189,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default(), Default::default());
     ///
     /// account.rename("New Name");
     /// assert_eq!(account.name(), "New Name");
@@ -147,7 +197,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,types::errors::CacheError};
-    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default(), Default::default());
     ///
     /// assert_eq!(account.name(), "Old Name");
     ///
@@ -259,7 +309,7 @@ impl Account {
         if self.name() != CACHE {
             if !self.contains_cache() {
                 self.accounts
-                    .push(Account::new(CACHE, Default::default(), Default::default()));
+                    .push(Account::new(CACHE, Default::default(), Default::default(),true));
             }
             let cache_position = self.cache_position().unwrap();
             self.accounts[cache_position]
@@ -374,7 +424,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,stg};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     /// account.insert("a small number", stg(42));
     /// assert_eq!(account.contains_key("a small number"), true);
     /// assert_eq!(account.contains_key("a big number"), false);
@@ -420,7 +470,8 @@ impl Account {
     ///         ("bool".to_string(),stg(true)),
     ///         ("char".to_string(),stg('c')),
     ///     ]),
-    ///     Default::default()
+    ///     Default::default(),
+    ///     Default::default(),
     /// );
     ///
     /// for key in account.keys() {
@@ -447,7 +498,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,stg};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new("New account", HashMap::with_capacity(100),Default::default());
+    /// let mut account : Account = Account::new("New account", HashMap::with_capacity(100), Default::default(), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -511,7 +562,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,stg};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     /// account.insert("a small number", stg(42));
     /// assert_eq!(account.get("a small number"), Some(&stg(42)));
     /// assert_eq!(account.get("a big number"), None);
@@ -536,7 +587,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,stg};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     /// assert_eq!(account.insert("a small number", stg(1)),None);
     /// assert_eq!(account.settings().is_empty(), false);
     ///
@@ -563,7 +614,11 @@ impl Account {
         }
     */
 }
-
+impl Default for Account {
+    fn default() -> Self {
+        Self { name: Default::default(), settings: Default::default(), accounts: Default::default(), active: true }
+    }
+}
 /// Required trait for any type that that will be used as a setting
 pub trait Settings
 where
@@ -733,7 +788,7 @@ mod tests {
     }
     #[test]
     fn account_new() {
-        let mut account1 = Account::new("name", Default::default(), Default::default());
+        let mut account1 = Account::new("name", Default::default(), Default::default(),Default::default());
         account1._insert("answer to everything", 42.stg());
         account1._insert("true is true", true.stg());
         let account2 = Account::new(
@@ -743,6 +798,7 @@ mod tests {
                 ("true is true".to_string(), true.stg()),
             ]
             .into(),
+            Default::default(),
             Default::default(),
         );
         assert!(account1 == account2);
