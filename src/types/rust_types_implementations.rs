@@ -3,7 +3,7 @@ use crate::*;
 impl Setting for bool {}
 impl Setting for i32 {}
 impl Setting for char {}
-
+impl Setting for String {}
 mod tests {
     #![allow(unused_imports)]
     use crate::*;
