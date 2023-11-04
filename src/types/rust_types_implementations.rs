@@ -1,8 +1,8 @@
 use crate::*;
 
-impl Settings for bool{}
-impl Settings for i32{}
-impl Settings for char{}
+impl Setting for bool {}
+impl Setting for i32 {}
+impl Setting for char {}
 
 mod tests {
     #![allow(unused_imports)]
@@ -15,10 +15,10 @@ mod tests {
         assert_eq!(stg_fun, stg_dot);
         let stg_fu1 = stg_fun.clone();
         let stg_do1 = stg_fun.clone();
-        let bool_dot_unstg      : bool   = stg_fun.unstg();
-        let bool_dot_safe_unstg : bool   = stg_dot.safe_unstg().unwrap();
-        let bool_fun_unstg      : bool   = unstg(stg_fu1);
-        let bool_fun_safe_unstg : bool   = safe_unstg(stg_do1).unwrap();
+        let bool_dot_unstg: bool = stg_fun.unstg();
+        let bool_dot_safe_unstg: bool = stg_dot.safe_unstg().unwrap();
+        let bool_fun_unstg: bool = unstg(stg_fu1);
+        let bool_fun_safe_unstg: bool = safe_unstg(stg_do1).unwrap();
         assert_eq!(bool_dot_unstg, bool);
         assert_eq!(bool_fun_unstg, bool);
         assert_eq!(bool_dot_unstg, bool_dot_safe_unstg);
