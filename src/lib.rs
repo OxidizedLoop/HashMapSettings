@@ -16,241 +16,21 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
-/// A restricted [`HashMap`] with an associated name.
-/// 
-/// Groups are intended to be used internally by [`Account`]'s. This struct will likely go private in the future.
-/// 
-/// Group is a wrapper around [`HashMap<String, Stg>`] and most methods are a direct call to [`HashMap`]'s methods.
-///  
-/// In the current version of the crate the only expected interaction that a developer would have with `Group`
-/// is by creating a new group using [`new`](Group::new) while creating a new [Account].
-#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct Group {
-    name: String,
-    settings: HashMap<String, Stg>,
-}
-impl Group {
-    ///Creates a new `Group` from a [`&str`] and a [`HashMap<String, Stg>`]
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group};
-    /// let mut group : Group = Group::new("New group", Default::default());
-    /// ```
-    pub fn new(name: &str, settings: HashMap<String, Stg>) -> Self {
-        Self {
-            name: name.to_string(),
-            settings,
-        }
-    }
-    /// Returns the name of the `Group`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group};
-    /// let mut group : Group = Group::new("New group", Default::default());
-    /// 
-    /// assert_eq!(group.name(), "New group");
-    /// ```
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    /// Takes a `&str` and updates the name of the `Group`
-    ///
-    /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group};
-    /// let mut group : Group = Group::new("Old Name", Default::default());
-    ///
-    /// group.rename("New Name");
-    /// assert_eq!(group.name(), "New Name");
-    /// ```
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,types::errors::CacheError};
-    /// let mut group : Group = Group::new("Old Name", Default::default());
-    ///
-    /// assert_eq!(group.name(), "Old Name");
-    ///
-    /// assert!(group.rename("Cache") == Some(CacheError::Naming));
-    /// assert_ne!(group.name(), "Cache");
-    /// assert_eq!(group.name(), "Old Name");
-    /// ```
-    pub fn rename(&mut self, new_name: &str) -> Option<CacheError> {
-        if self.name() == CACHE {
-            return Some(CacheError::Renaming);
-        }
-        if new_name == CACHE {
-            return Some(CacheError::Naming);
-        }
-        self.name = new_name.to_string();
-        None
-    }
-    /// Return a reference to the `HashMap`
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,Settings};
-    /// use std::collections::HashMap;
-    /// let mut group : Group = Group::new(
-    ///     "New Group", 
-    ///     HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
-    ///     ])
-    /// );
-    ///
-    /// assert!(group.settings() == 
-    ///     &HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
-    ///     ])
-    /// );
-    ///
-    /// ```
-    pub fn settings(&self) -> &HashMap<String, Stg> {
-        &self.settings
-    }
-    /// Returns `true` if the group contains a value for the specified key.
-    /// 
-    /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`Eq`] on the borrowed form must match those for the key type.
-    /// 
-    /// This method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
-    /// 
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,stg};
-    /// let mut group : Group = Group::new("New group", Default::default());
-    /// group.insert("a small number", stg(42));
-    /// assert_eq!(group.contains_key("a small number"), true);
-    /// assert_eq!(group.contains_key("a big number"), false);
-    /// ```
-    pub fn contains_key(&self, setting_name: &str) -> bool {
-        self.settings.contains_key(setting_name)
-    }
-    /// Returns a reference to the value corresponding to the key.
-    ///
-    /// The key may be any borrowed form of the map's key type, but
-    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
-    /// the key type.
-    /// 
-    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,stg};
-    /// let mut group : Group = Group::new("New group", Default::default());
-    /// group.insert("a small number", stg(42));
-    /// assert_eq!(group.get("a small number"), Some(&stg(42)));
-    /// assert_eq!(group.get("a big number"), None);
-    /// ```
-    pub fn get(&self, setting_name: &str) -> Option<&Stg> {
-        self.settings.get(setting_name)
-    }
-    /// Inserts a key-value pair into the map.
-    /// 
-    /// If the map did not have this key present, None is returned.
-    /// 
-    /// If the map did have this key present, the value is updated, and the old
-    /// value is returned. The key is not updated, though; this matters for
-    /// types that can be `==` without being identical. See the [module-level
-    /// documentation] for more.
-    ///
-    /// [module-level documentation]: std::collections#insert-and-complex-keys
-    /// 
-    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
-    /// 
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,stg};
-    /// let mut group : Group = Group::new("New group", Default::default());
-    /// assert_eq!(group.insert("a small number", stg(1)),None);
-    /// assert_eq!(group.settings().is_empty(), false);
-    /// 
-    /// group.insert("a small number", stg(2));
-    /// assert_eq!(group.insert("a small number", stg(3)), Some(stg(2)));
-    /// assert_eq!(group.settings()[&"a small number".to_string()], stg(3));
-    /// ```
-    pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
-        self.settings
-            .insert(setting_name.to_string(), setting_value)
-    }
-    /// An iterator visiting all keys in arbitrary order.
-    /// The iterator element type is `&'a String`.
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
-    /// 
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,stg};
-    /// use std::collections::HashMap;
-    /// let mut group : Group = Group::new(
-    ///     "New Group", 
-    ///     HashMap::from([
-    ///         ("int".to_string(),stg(42)),
-    ///         ("bool".to_string(),stg(true)),
-    ///         ("char".to_string(),stg('c')),
-    ///     ])
-    /// );
-    ///
-    /// for key in group.keys() {
-    ///     println!("{key}");
-    /// }
-    /// ```
-    ///
-    /// # Performance
-    ///
-    /// In the current implementation, iterating over keys takes O(capacity) time
-    /// instead of O(len) because it internally visits empty buckets too.
-    pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
-        self.settings.keys()
-    }
-    /// Returns the number of elements the map can hold without reallocating.
-    ///
-    /// This number is a lower bound; the `HashMap<String, Stg>` might be able to hold
-    /// more, but is guaranteed to be able to hold at least this many.
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
-    /// 
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Group,stg};
-    /// use std::collections::HashMap;
-    /// let mut group : Group = Group::new("New group", HashMap::with_capacity(100));
-    /// assert!(group.capacity() >= 100);
-    /// ```
-    pub fn capacity(&self) -> usize {
-        self.settings.capacity()
-    }
-}
-
-///A struct holding a [`Group`] and a [`Vec`] of other [`Account`]s
+/// A [`HashMap`]`<`[`String`],[`Stg`]`>` with an associated name. May contain a [`Vec`] of other `Accounts`.
 ///
-/// The name of an account is the name of the Group it holds.
+/// The `HashMap` contains all the `Stg`s inside of all sub accounts.
 ///
-///[`Group`]contains all settings inside of all sub accounts.
+/// All sub accounts, need to be uniquely named.
 ///
-///All sub accounts,need to be uniquely named.
-///
-///len()-1 of the [`Vec`] is the cache if one is created.
+/// len()-1 of the `Vec` is the cache if one is created with [`cache`](Account::cache).
 ///
 /// ```
 /// # // todo!() add examples
 /// ```
 #[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Account {
-    settings: Group,
+    name: String,
+    settings: HashMap<String, Stg>,
     //should contains all settings inside of accounts and its the default for this Account
     accounts: Vec<Account>,
     //list of all sub accounts, uniquely named.
@@ -259,12 +39,24 @@ pub struct Account {
     //cache must contain all settings at all times if it exists
 }
 impl Account {
-    pub fn new(settings: Group, accounts: Vec<Account>) -> Self {
+    pub fn new(name: &str, settings: HashMap<String, Stg>, accounts: Vec<Account>) -> Self {
         //doesn't check if Account is valid,consider using new_valid instead if it isn
-        Account { settings, accounts }
+        Account {
+            name: name.to_string(),
+            settings,
+            accounts,
+        }
     }
-    pub fn new_valid(settings: Group, accounts: Vec<Account>) -> Result<Self, InvalidAccountError> {
-        let new_account = Account { settings, accounts };
+    pub fn new_valid(
+        name: &str,
+        settings: HashMap<String, Stg>,
+        accounts: Vec<Account>,
+    ) -> Result<Self, InvalidAccountError> {
+        let new_account = Account {
+            name: name.to_string(),
+            settings,
+            accounts,
+        };
         if let Some(error) = new_account.is_invalid() {
             Err(error)
         } else {
@@ -296,15 +88,73 @@ impl Account {
         }
         None
     }
+    /// Returns the name of the `Account`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    ///
+    /// assert_eq!(account.name(), "New account");
+    /// ```
     pub fn name(&self) -> &str {
-        self.settings.name()
+        &self.name
     }
-    pub fn settings(&self) -> &Group {
+    /// Return a reference to the `HashMap`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Settings};
+    /// use std::collections::HashMap;
+    /// let mut account : Account = Account::new(
+    ///     "New Account",
+    ///     HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ]),
+    ///     Default::default()
+    /// );
+    ///
+    /// assert!(account.settings() ==
+    ///     &HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ])
+    /// );
+    ///
+    /// ```
+    pub fn settings(&self) -> &HashMap<String, Stg> {
         &self.settings
     }
     pub fn accounts(&self) -> &Vec<Account> {
         &self.accounts
     }
+    /// Takes a `&str` and updates the name of the `Account`
+    ///
+    /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default());
+    ///
+    /// account.rename("New Name");
+    /// assert_eq!(account.name(), "New Name");
+    /// ```
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,types::errors::CacheError};
+    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default());
+    ///
+    /// assert_eq!(account.name(), "Old Name");
+    ///
+    /// assert!(account.rename("Cache") == Some(CacheError::Naming));
+    /// assert_ne!(account.name(), "Cache");
+    /// assert_eq!(account.name(), "Old Name");
+    /// ```
     pub fn rename(&mut self, new_name: &str) -> Option<CacheError> {
         if self.name() == CACHE {
             return Some(CacheError::Renaming);
@@ -312,7 +162,7 @@ impl Account {
         if new_name == CACHE {
             return Some(CacheError::Naming);
         }
-        self.settings.rename(new_name);
+        self.name = new_name.to_string();
         None
     }
     pub fn deep_rename(
@@ -408,14 +258,11 @@ impl Account {
         //updates the cache.
         if self.name() != CACHE {
             if !self.contains_cache() {
-                self.accounts.push(Account::new(
-                    Group::new(CACHE, Default::default()),
-                    Default::default(),
-                ));
+                self.accounts
+                    .push(Account::new(CACHE, Default::default(), Default::default()));
             }
             let cache_position = self.cache_position().unwrap();
             self.accounts[cache_position]
-                .settings
                 .settings
                 .reserve(self.settings.capacity()); //this assumes that Account.settings contains all settings and isn't empty
             for setting in self.settings.keys() {
@@ -427,7 +274,7 @@ impl Account {
                     } else {
                         self.accounts[cache_position].insert(
                             setting,
-                            self.settings.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
+                            self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
                         );
                     }
                 }
@@ -517,6 +364,21 @@ impl Account {
             }
         }
     }
+    /// Returns `true` if the `Account` contains a value for the specified key.
+    ///
+    /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`Eq`] on the borrowed form must match those for the key type.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,stg};
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// account.insert("a small number", stg(42));
+    /// assert_eq!(account.contains_key("a small number"), true);
+    /// assert_eq!(account.contains_key("a big number"), false);
+    /// ```
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
@@ -529,11 +391,11 @@ impl Account {
                 return Some(value);
             }
         }
-        return self.settings.get(setting_name);
+        return self._get(setting_name);
     }
     pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
         let mut return_value = None;
-        if let Some(value) = self.settings.insert(setting_name, setting_value.clone()) {
+        if let Some(value) = self._insert(setting_name, setting_value.clone()) {
             return_value = Some(value);
         }
         if self.contains_cache() {
@@ -541,9 +403,53 @@ impl Account {
         }
         return_value
     }
+    /// An iterator visiting all keys in arbitrary order.
+    /// The iterator element type is `&'a String`.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,stg};
+    /// use std::collections::HashMap;
+    /// let mut account : Account = Account::new(
+    ///     "New Account",
+    ///     HashMap::from([
+    ///         ("int".to_string(),stg(42)),
+    ///         ("bool".to_string(),stg(true)),
+    ///         ("char".to_string(),stg('c')),
+    ///     ]),
+    ///     Default::default()
+    /// );
+    ///
+    /// for key in account.keys() {
+    ///     println!("{key}");
+    /// }
+    /// ```
+    ///
+    /// # Performance
+    ///
+    /// In the current implementation, iterating over keys takes O(capacity) time
+    /// instead of O(len) because it internally visits empty buckets too.
     pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
         self.settings.keys()
     }
+    /// Returns the number of elements the map can hold without reallocating.
+    ///
+    /// This number is a lower bound; the `HashMap<String, Stg>` might be able to hold
+    /// more, but is guaranteed to be able to hold at least this many.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,stg};
+    /// use std::collections::HashMap;
+    /// let mut account : Account = Account::new("New account", HashMap::with_capacity(100),Default::default());
+    /// assert!(account.capacity() >= 100);
+    /// ```
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
@@ -593,7 +499,55 @@ impl Account {
     pub fn get_mut(&mut self, index: usize) -> Option<&mut Account> {
         self.accounts.get_mut(index)
     }
-
+    /// Returns a reference to the value corresponding to the key.
+    ///
+    /// The key may be any borrowed form of the map's key type, but
+    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
+    /// the key type.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,stg};
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// account.insert("a small number", stg(42));
+    /// assert_eq!(account.get("a small number"), Some(&stg(42)));
+    /// assert_eq!(account.get("a big number"), None);
+    /// ```
+    fn _get(&self, setting_name: &str) -> Option<&Stg> {
+        self.settings.get(setting_name)
+    }
+    /// Inserts a key-value pair into the map.
+    ///
+    /// If the map did not have this key present, None is returned.
+    ///
+    /// If the map did have this key present, the value is updated, and the old
+    /// value is returned. The key is not updated, though; this matters for
+    /// types that can be `==` without being identical. See the [module-level
+    /// documentation] for more.
+    ///
+    /// [module-level documentation]: std::collections#insert-and-complex-keys
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,stg};
+    /// let mut account : Account = Account::new("New account", Default::default(), Default::default());
+    /// assert_eq!(account.insert("a small number", stg(1)),None);
+    /// assert_eq!(account.settings().is_empty(), false);
+    ///
+    /// account.insert("a small number", stg(2));
+    /// assert_eq!(account.insert("a small number", stg(3)), Some(stg(2)));
+    /// assert_eq!(account.settings()[&"a small number".to_string()], stg(3));
+    /// ```
+    fn _insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
+        self.settings
+            .insert(setting_name.to_string(), setting_value)
+    }
     /*
         unused functions
         pub fn all_names(&self) -> Vec<&str> { //what would be the use
@@ -766,30 +720,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn group_test() {
+    fn account_test() {
         let bool_setting = true;
         let i32_setting = 42;
-        let mut account = Group::default();
-        account.insert("bool_setting", Stg::new(&bool_setting));
-        account.insert("i32_setting", i32_setting.stg());
-        let i32s: i32 = account.get("i32_setting").unwrap().clone().unstg();
+        let mut account = Account::default();
+        account._insert("bool_setting", Stg::new(&bool_setting));
+        account._insert("i32_setting", i32_setting.stg());
+        let i32s: i32 = account._get("i32_setting").unwrap().clone().unstg();
         assert_eq!(i32s, 42);
-        let stg: Stg = account.get("bool_setting").unwrap().clone();
+        let stg: Stg = account._get("bool_setting").unwrap().clone();
         assert!(stg.unstg::<bool>());
     }
     #[test]
-    fn group_new() {
-        let mut group1 = Group::new("name", Default::default());
-        group1.insert("answer to everything", 42.stg());
-        group1.insert("true is true", true.stg());
-        let group2 = Group::new(
+    fn account_new() {
+        let mut account1 = Account::new("name", Default::default(), Default::default());
+        account1._insert("answer to everything", 42.stg());
+        account1._insert("true is true", true.stg());
+        let account2 = Account::new(
             "name",
             [
                 ("answer to everything".to_string(), 42.stg()),
                 ("true is true".to_string(), true.stg()),
             ]
             .into(),
+            Default::default(),
         );
-        assert!(group1 == group2);
+        assert!(account1 == account2);
     }
 }
