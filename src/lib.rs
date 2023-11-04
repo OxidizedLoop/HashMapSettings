@@ -40,7 +40,12 @@ pub struct Account {
     //cache must contain all settings at all times if it exists
 }
 impl Account {
-    pub fn new(name: &str, active: bool, settings: HashMap<String, Stg>, accounts: Vec<Account>) -> Self {
+    pub fn new(
+        name: &str,
+        active: bool,
+        settings: HashMap<String, Stg>,
+        accounts: Vec<Account>,
+    ) -> Self {
         //doesn't check if Account is valid,consider using new_valid instead if it isn
         Account {
             name: name.to_string(),
@@ -110,7 +115,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Settings};
+    /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
     /// let mut account : Account = Account::new(
     ///     "New Account",
@@ -139,9 +144,9 @@ impl Account {
     /// Return `true` if the `Account` is active
     ///
     /// When not active `Accounts` will be treated as if they were not there when called by some of the parent's `Account` methods.
-    /// 
+    ///
     /// When creating an `Account` with [`Default`] active will be `true`.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -154,11 +159,11 @@ impl Account {
     /// assert!(!account.active());
     ///
     /// ```
-    pub fn active(&self) -> bool{
+    pub fn active(&self) -> bool {
         self.active
     }
     /// Takes a `bool` and changes the value of active, returns `true` if changes were made.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -173,8 +178,8 @@ impl Account {
     /// assert!(account.active());
     ///
     /// ```
-    pub fn change_activity(&mut self,new_active: bool) -> bool{
-        if self.active() == new_active{
+    pub fn change_activity(&mut self, new_active: bool) -> bool {
+        if self.active() == new_active {
             false
         } else {
             self.active = new_active;
@@ -308,8 +313,12 @@ impl Account {
         //updates the cache.
         if self.name() != CACHE {
             if !self.contains_cache() {
-                self.accounts
-                    .push(Account::new(CACHE, true, Default::default(), Default::default()));
+                self.accounts.push(Account::new(
+                    CACHE,
+                    true,
+                    Default::default(),
+                    Default::default(),
+                ));
             }
             let cache_position = self.cache_position().unwrap();
             self.accounts[cache_position]
@@ -423,7 +432,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Settings};
+    /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
     /// account.insert("a small number", 42.stg());
     /// assert_eq!(account.contains_key("a small number"), true);
@@ -461,7 +470,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Settings};
+    /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
     /// let mut account : Account = Account::new(
     ///     Default::default(),
@@ -561,7 +570,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Settings};
+    /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
     /// account.insert("a small number", 42.stg());
     /// assert_eq!(account.get("a small number"), Some(&42.stg()));
@@ -586,7 +595,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Settings};
+    /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
     /// assert_eq!(account.insert("a small number", 1.stg()),None);
     /// assert_eq!(account.settings().is_empty(), false);
@@ -616,34 +625,39 @@ impl Account {
 }
 impl Default for Account {
     fn default() -> Self {
-        Self { name: Default::default(), settings: Default::default(), accounts: Default::default(), active: true }
+        Self {
+            name: Default::default(),
+            settings: Default::default(),
+            accounts: Default::default(),
+            active: true,
+        }
     }
 }
 /// Required trait for any type that that will be used as a setting
-pub trait Settings
+pub trait Setting
 where
     Self: Serialize + for<'a> Deserialize<'a>,
 {
-    ///turns a type implementing [Settings] into a [Stg]
+    ///turns a type implementing [Setting] into a [Stg]
     ///
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Stg,stg,Settings};
+    /// use hashmap_settings::{Stg,stg,Setting};
     /// let bool = true;
     /// let bool_stg: Stg = bool.stg();
     /// assert_eq!(bool_stg, stg(bool))
     /// ```
     fn stg(self) -> Stg
     where
-        Self: Settings,
+        Self: Setting,
     {
         Stg {
             value: serde_json::to_string(&self).unwrap(),
         }
     }
 }
-/// A intermediate type that [`Settings`] are converted to.
+/// A intermediate type that [`Setting`] are converted to.
 ///
 /// ```
 /// # // todo!() add examples
@@ -653,7 +667,7 @@ pub struct Stg {
     value: String,
 }
 impl Stg {
-    pub fn new<T: Settings>(value: &T) -> Stg {
+    pub fn new<T: Setting>(value: &T) -> Stg {
         Stg {
             value: serde_json::to_string(&value).unwrap(),
         }
@@ -661,19 +675,19 @@ impl Stg {
     pub fn get(&self) -> &str {
         &self.value
     }
-    ///turns a [`Stg`] into a type implementing [`Settings`],can [`panic!`]
+    ///turns a [`Stg`] into a type implementing [`Setting`],can [`panic!`]
     ///
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Stg,Settings};
+    /// use hashmap_settings::{Stg,Setting};
     ///
     /// let bool_stg: Stg = true.stg();
     /// assert_eq!(bool_stg.unstg::<bool>(), true);
     /// //here we need to use ::<bool> to specify that want to turn bool_stg into a bool
     /// ```
     /// ```
-    /// use hashmap_settings::{Stg,Settings};
+    /// use hashmap_settings::{Stg,Setting};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let bool :bool = bool_stg.unstg();
@@ -684,31 +698,31 @@ impl Stg {
     /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
     /// Consider using [`safe_unstg`](`crate::Stg::safe_unstg`) as it returns a result type instead.
     /// ```should_panic
-    /// use hashmap_settings::{Stg,Settings};
+    /// use hashmap_settings::{Stg,Setting};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let number :i32 = bool_stg.unstg();
     /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
     ///
     /// ```
-    pub fn unstg<T: Settings>(self) -> T {
+    pub fn unstg<T: Setting>(self) -> T {
         serde_json::from_str(&self.value).unwrap() //unsafe, can panic
     }
-    ///turns a [`Stg`] into a [`Result`] type implementing [`Settings`]
+    ///turns a [`Stg`] into a [`Result`] type implementing [`Setting`]
     ///
     /// ```
     /// # // todo!() add examples
     /// ```
-    pub fn safe_unstg<T: Settings>(self) -> Result<T, serde_json::Error> {
+    pub fn safe_unstg<T: Setting>(self) -> Result<T, serde_json::Error> {
         serde_json::from_str(&self.value)
     }
 }
-///turns a type implementing [`Settings`] into a [`Stg`]
+///turns a type implementing [`Setting`] into a [`Stg`]
 ///
 /// # Examples
 ///
 /// ```
-/// use hashmap_settings::{Stg,stg,Settings};
+/// use hashmap_settings::{Stg,stg,Setting};
 /// let bool = true;
 /// let bool_stg: Stg = stg(bool);
 /// assert_eq!(bool_stg, bool.stg())
@@ -716,13 +730,13 @@ impl Stg {
 #[allow(dead_code)]
 pub fn stg<T>(value: T) -> Stg
 where
-    T: Settings,
+    T: Setting,
 {
     Stg {
         value: serde_json::to_string(&value).unwrap(),
     }
 }
-///turns a [`Stg`] into a type implementing [`Settings`],can [`panic!`]
+///turns a [`Stg`] into a type implementing [`Setting`],can [`panic!`]
 ///
 /// # Examples
 ///
@@ -754,11 +768,11 @@ where
 #[allow(dead_code)]
 pub fn unstg<T>(stg: Stg) -> T
 where
-    T: Settings,
+    T: Setting,
 {
     serde_json::from_str(stg.get()).unwrap() //unsafe can panic
 }
-///turns a [`Stg`] into a [`Result`] type implementing [`Settings`]
+///turns a [`Stg`] into a [`Result`] type implementing [`Setting`]
 ///
 /// ```
 /// # // todo!() add examples
@@ -766,7 +780,7 @@ where
 #[allow(dead_code)]
 pub fn safe_unstg<T>(stg: Stg) -> Result<T, serde_json::Error>
 where
-    T: Settings,
+    T: Setting,
 {
     serde_json::from_str(stg.get())
 }
@@ -788,7 +802,12 @@ mod tests {
     }
     #[test]
     fn account_new() {
-        let mut account1 = Account::new("name", Default::default(), Default::default(),Default::default());
+        let mut account1 = Account::new(
+            "name",
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        );
         account1._insert("answer to everything", 42.stg());
         account1._insert("true is true", true.stg());
         let account2 = Account::new(
