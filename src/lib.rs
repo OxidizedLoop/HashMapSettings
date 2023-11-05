@@ -599,16 +599,52 @@ impl Account {
         }
         None
     }
+    /// Removes the last element from a vector and returns it, or [`None`] if it
+    /// is empty.
+    ///
+    /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
+    /// 
+    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from the main `Account` present only on the popped sub `Account`.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("3", Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.pop();
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
     pub fn pop(&mut self) -> std::option::Option<Account> {
         if let Some(position) = self.cache_position() {
             if position == 0 {
                 return None;
             }
-            let r_value = self.accounts.remove(position - 1);
-            for setting in r_value.keys() {
-                self.update_cache_of_setting(setting)
+            let popped_account = self.accounts.remove(position - 1);
+            if popped_account.active(){
+                for setting in popped_account.keys() {
+                    self.update_cache_of_setting(setting)
+                }  
             }
-            Some(r_value)
+            Some(popped_account)
         } else {
             self.accounts.pop()
         }
