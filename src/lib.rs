@@ -307,10 +307,53 @@ impl Account {
         }
         None
     }
+    /// Creates a `Cache` of the sub `Accounts`.
+    ///
+    /// Does nothing if account name is [`CACHE`], 
+    /// will update the cache if one already exists.
+    /// 
+    /// A `Cache` is a sub `Account` with a name created from the const [`CACHE`] 
+    /// and it's located at main `Account`.[len()](Account::len)-1
+    /// 
+    /// Having a `Cache` makes calling functions like [get()](Account::get) much faster 
+    /// as only `Cache` is checked instead of all sub `Accounts` in the `Vec`.
+    /// 
+    /// Verify if `Cache` exists with [contains_cache](Account::contains_cache) 
+    /// and get it's position with [cache_position](Account::cache_position)
+    ///
+    /// # Panics
+    ///
+    /// This effectively pushes a new `Account` into the `Vec` so it
+    /// panics if the new capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.cache();
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", true, Default::default(), Default::default()),
+    ///             Account::new("2", true, Default::default(), Default::default()),
+    ///             Account::new("Cache", true, Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
     pub fn cache(&mut self) {
-        //create a cache if one doesn't exist.
-        //does nothing if account name is Cache
-        //updates the cache.
         if self.name() != CACHE {
             if !self.contains_cache() {
                 self.accounts.push(Account::new(
@@ -327,15 +370,17 @@ impl Account {
             for setting in self.settings.keys() {
                 //this assumes that Account.settings contains all settings and isn't empty
                 for account in (0..cache_position).rev() {
-                    if let Some(value) = self.accounts[account].get(setting) {
-                        let temp = value.clone(); //to prevent cannot borrow `self.sub_accounts` as mutable because it is also borrowed as immutable Error
-                        self.accounts[cache_position].insert(setting, temp);
-                    } else {
-                        self.accounts[cache_position].insert(
-                            setting,
-                            self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
-                        );
-                    }
+                    if self.accounts[account].active() {
+                        if let Some(value) = self.accounts[account].get(setting) {
+                            let temp = value.clone(); //to prevent cannot borrow `self.sub_accounts` as mutable because it is also borrowed as immutable Error
+                            self.accounts[cache_position].insert(setting, temp);
+                        } else {
+                            self.accounts[cache_position].insert(
+                                setting,
+                                self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
+                            );
+                        }  
+                    } 
                 }
             }
         }
