@@ -486,13 +486,38 @@ impl Account {
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
+    /// Returns a reference to the value corresponding to the key.
+    ///
+    /// Internally [`get()`](Account::get()) is called on all sub `Accounts` of the `Vec`
+    /// starting at the end, followed by calling [`get()`](HashMap::get()) on the main `Account` `settings`.
+    /// Will return `Some`([Stg]) when found.
+    /// 
+    /// If there is a significant number of sub accounts it is recommend to create a `Cache` with [`cache()`](Account::cache) to improve performance.
+    /// Then there will be only one call of [`get()`](HashMap::get()) to `Cache` to obtain the desired [Stg].
+    /// 
+    /// The key may be any borrowed form of the map's key type, but
+    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
+    /// the key type.
+    ///
+    /// This method ends on a call to a [`HashMap`]'s [`get()`](HashMap::get()).
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account : Account = Default::default();
+    /// account.insert("a small number", 42.stg());
+    /// assert_eq!(account.get("a small number"), Some(&42.stg()));
+    /// assert_eq!(account.get("a big number"), None);
+    /// ```
     pub fn get(&self, setting_name: &str) -> Option<&Stg> {
         if let Some(position) = self.cache_position() {
             return self.accounts[position].get(setting_name);
         }
         for account in (0..self.len()).rev() {
-            if let Some(value) = self.accounts[account].get(setting_name) {
-                return Some(value);
+            if self.accounts[account].active {
+                if let Some(value) = self.accounts[account].get(setting_name) {
+                    return Some(value);
+                }
             }
         }
         return self._get(setting_name);
