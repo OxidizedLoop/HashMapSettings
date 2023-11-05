@@ -519,10 +519,49 @@ impl Account {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
+    ///
+    /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    /// 
+    /// The `Cache` will always be at the end of the collection, so if the main `Account` 
+    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted 
+    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
+    /// 
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("2", Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.push(Account::new("3", Default::default(), Default::default(), Default::default()));
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
     pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
         if account.name() == CACHE {
             //check if account isn't named Cache
-            return Some(InvalidAccountError::Cache(CacheError::Naming));
+            return Some(InvalidAccountError::Cache(CacheError::Inserting));
         }
         if self.accounts_names().contains(&account.name()) {
             //check if account has the same name as a sibling account
@@ -534,11 +573,29 @@ impl Account {
         }
         if let Some(cache_position) = self.cache_position() {
             self.accounts.insert(cache_position, account.clone());
-            for setting in account.keys() {
-                self.update_cache_of_setting(setting)
+            if account.active() {
+                for (setting,setting_value) in account.settings.iter() {
+                    if !account.contains_key(setting){
+                        self._insert(setting,setting_value.clone());
+                        self.accounts[cache_position]._insert(setting, setting_value.clone());
+                    } else {
+                        self.update_cache_of_setting(setting);
+                    }
+                }
+            } else {
+                for (setting,setting_value) in account.settings.iter() {
+                    if !account.contains_key(setting){
+                        self._insert(setting,setting_value.clone());
+                    }
+                }
             }
         } else {
-            self.accounts.push(account);
+            self.accounts.push(account.clone());
+            for (setting,setting_value) in account.settings.iter() {
+                if !account.contains_key(setting){
+                    self._insert(setting,setting_value.clone());
+                }
+            }
         }
         None
     }
