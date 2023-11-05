@@ -649,6 +649,73 @@ impl Account {
             self.accounts.pop()
         }
     }
+    /// Removes the last element from a vector and returns it, or [`None`] if it
+    /// is empty.
+    ///
+    /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
+    /// 
+    /// Will remove settings from the main `Account` present only on the popped sub `Account`.
+    /// Use [pop](Account::pop) if you want the main `Account` settings to remain unchanged.
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("3", Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.pop_remove();
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
+    pub fn pop_remove(&mut self) -> std::option::Option<Account> {
+        let popped_account = if let Some(position) = self.cache_position() {
+            if position == 0 {
+                return None;
+            }
+            let popped_account = self.accounts.remove(position - 1);
+            if popped_account.active(){
+                for setting in popped_account.keys() {
+                    self.update_cache_of_setting(setting)
+                }  
+            }
+            popped_account
+        } else if let Some(popped_account) = self.accounts.pop(){
+            popped_account 
+        } else {
+            return None
+        };
+        for setting in popped_account.keys() {
+            if !self.vec_contains_key(setting){
+                self.settings.remove(setting);
+            }
+        }
+        Some(popped_account)
+    }
+    fn vec_contains_key(&self,setting: &str) -> bool {
+        for account in self.accounts(){
+            if account.contains_key(setting) {
+                return true
+            }
+        }
+        false
+    }
     pub fn get_mut(&mut self, index: usize) -> Option<&mut Account> {
         self.accounts.get_mut(index)
     }
