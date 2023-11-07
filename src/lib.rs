@@ -7,6 +7,7 @@
 //! # // todo!() add examples
 //! ```
 #![warn(missing_docs)]
+#![doc(test(attr(deny(warnings))))]
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -103,7 +104,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
+    /// let account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     ///
     /// assert_eq!(account.name(), "New account");
     /// ```
@@ -117,7 +118,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(
+    /// let account : Account = Account::new(
     ///     "New Account",
     ///     Default::default(),
     ///     HashMap::from([
@@ -151,7 +152,6 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// use std::collections::HashMap;
     /// let mut account : Account = Account::new("New Account", true, Default::default(), Default::default());
     ///
     /// assert!(account.active());
@@ -168,7 +168,6 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// use std::collections::HashMap;
     /// let mut account : Account = Account::new("New Account", false, Default::default(), Default::default());
     ///
     /// assert!(!account.active());
@@ -605,7 +604,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(
+    /// let account: Account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     HashMap::from([
@@ -640,7 +639,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
+    /// let account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -1001,7 +1000,7 @@ impl Stg {
     /// use hashmap_settings::{Stg,Setting};
     ///
     /// let bool_stg: Stg = true.stg();
-    /// let number :i32 = bool_stg.unstg();
+    /// let _number :i32 = bool_stg.unstg();
     /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
     ///
     /// ```
@@ -1061,7 +1060,7 @@ where
 /// use hashmap_settings::{Stg,stg,unstg};
 ///
 /// let bool_stg: Stg = stg(true);
-/// let number :i32 = unstg(bool_stg);
+/// let _number :i32 = unstg(bool_stg);
 /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
 ///
 /// ```
