@@ -1000,7 +1000,7 @@ impl Stg {
     /// use hashmap_settings::{Stg,Setting};
     ///
     /// let bool_stg: Stg = true.stg();
-    /// let number :i32 = bool_stg.unstg();
+    /// let _number :i32 = bool_stg.unstg();
     /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
     ///
     /// ```
@@ -1060,7 +1060,7 @@ where
 /// use hashmap_settings::{Stg,stg,unstg};
 ///
 /// let bool_stg: Stg = stg(true);
-/// let number :i32 = unstg(bool_stg);
+/// let _number :i32 = unstg(bool_stg);
 /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
 ///
 /// ```
