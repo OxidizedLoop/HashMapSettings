@@ -13,7 +13,7 @@ impl BoolStg {
         self.value
     }
 }
-impl Settings for BoolStg {}
+impl Setting for BoolStg {}
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct I32Stg {
@@ -28,7 +28,7 @@ impl I32Stg {
         self.value
     }
 }
-impl Settings for I32Stg {}
+impl Setting for I32Stg {}
 
 #[cfg(test)]
 mod tests {

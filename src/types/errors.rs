@@ -2,6 +2,7 @@
 pub enum CacheError {
     Renaming,
     Inserting,
+    Changing,
     Naming,
 }
 #[derive(PartialEq)]
