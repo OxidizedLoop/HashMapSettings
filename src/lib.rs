@@ -7,6 +7,7 @@
 //! # // todo!() add examples
 //! ```
 #![warn(missing_docs)]
+#![doc(test(attr(deny(warnings))))]
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map, HashMap, HashSet},
