@@ -104,7 +104,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
+    /// let account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
     ///
     /// assert_eq!(account.name(), "New account");
     /// ```
@@ -118,7 +118,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(
+    /// let account : Account = Account::new(
     ///     "New Account",
     ///     Default::default(),
     ///     HashMap::from([
@@ -152,7 +152,6 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// use std::collections::HashMap;
     /// let mut account : Account = Account::new("New Account", true, Default::default(), Default::default());
     ///
     /// assert!(account.active());
@@ -169,7 +168,6 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// use std::collections::HashMap;
     /// let mut account : Account = Account::new("New Account", false, Default::default(), Default::default());
     ///
     /// assert!(!account.active());
@@ -606,7 +604,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(
+    /// let account: Account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     HashMap::from([
@@ -641,7 +639,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let mut account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
+    /// let account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     pub fn capacity(&self) -> usize {
