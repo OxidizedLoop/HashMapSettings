@@ -445,15 +445,78 @@ impl Account {
         }
         None
     }
+    /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
+    ///
+    /// Won't return an error if the sub `Account` being pushed is invalid 
+    /// but will cause unintended behavior for future calls to the main `Account`.
+    /// Use [push](Account::push) if the Account might be invalid.
+    /// //todo!() put a link to what means for an Account to be invalid
+    /// 
+    /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    /// 
+    /// The `Cache` will always be at the end of the collection, so if the main `Account` 
+    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted 
+    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
+    /// 
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("2", Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.push_unchecked(Account::new("3", Default::default(), Default::default(), Default::default()));
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
     pub fn push_unchecked(&mut self, account: Account) {
         //doesn't check if Account being pushed is valid
         //if a invalid account is pushed it can cause unintended behavior when other functions are called
         if let Some(cache_position) = self.cache_position() {
-            self.accounts.insert(cache_position, account.clone());
-            for setting in account.keys() {
-                self.update_cache_of_setting(setting)
+            if account.active() {
+                self.accounts.insert(cache_position, account.clone());
+                for setting in account.settings.keys() {
+                    if !account.contains_key(setting){
+                        self._insert(setting,account.get(setting).unwrap().clone());
+                        self.accounts[cache_position]._insert(setting, account.get(setting).unwrap().clone());
+                    } else {
+                        self.update_cache_of_setting(setting);
+                    }
+                }
+            } else {
+                for setting in account.settings.keys() {
+                    if !account.contains_key(setting){
+                        self._insert(setting,account.get(setting).unwrap().clone());
+                    }
+                }
+                self.accounts.insert(cache_position, account);
             }
         } else {
+            for setting in account.settings.keys() {
+                if !account.contains_key(setting){
+                    self._insert(setting,account.get(setting).unwrap().clone());
+                }
+            }
             self.accounts.push(account);
         }
     }
@@ -591,6 +654,10 @@ impl Account {
     }
     /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
     ///
+    /// Will return an error if the sub `Account` being pushed is invalid or would make the main `Account` invalid.
+    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid. 
+    /// //todo!() put a link to what means for an Account to be valid/invalid
+    /// 
     /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     /// 
     /// The `Cache` will always be at the end of the collection, so if the main `Account` 
@@ -604,7 +671,7 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::{Account,types::errors::InvalidAccountError};
     /// let mut account : Account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
@@ -626,7 +693,9 @@ impl Account {
     ///             Account::new("3", Default::default(), Default::default(), Default::default())
     ///         ],
     ///     )
-    /// )
+    /// );
+    /// assert!(account.push(Account::new("3", Default::default(), Default::default(), Default::default())) 
+    ///     == Some(InvalidAccountError::ExistingName));
     /// ```
     pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
         if account.name() == CACHE {
@@ -642,30 +711,31 @@ impl Account {
             return Some(error);
         }
         if let Some(cache_position) = self.cache_position() {
-            self.accounts.insert(cache_position, account.clone());
             if account.active() {
-                for (setting,setting_value) in account.settings.iter() {
+                self.accounts.insert(cache_position, account.clone());
+                for setting in account.settings.keys() {
                     if !account.contains_key(setting){
-                        self._insert(setting,setting_value.clone());
-                        self.accounts[cache_position]._insert(setting, setting_value.clone());
+                        self._insert(setting, account.get(setting).unwrap().clone());
+                        self.accounts[cache_position]._insert(setting, account.get(setting).unwrap().clone());
                     } else {
                         self.update_cache_of_setting(setting);
                     }
                 }
             } else {
-                for (setting,setting_value) in account.settings.iter() {
+                for setting in account.settings.keys() {
                     if !account.contains_key(setting){
-                        self._insert(setting,setting_value.clone());
+                        self._insert(setting, account.get(setting).unwrap().clone());
                     }
                 }
+                self.accounts.insert(cache_position, account);
             }
         } else {
-            self.accounts.push(account.clone());
-            for (setting,setting_value) in account.settings.iter() {
+            for setting in account.settings.keys() {
                 if !account.contains_key(setting){
-                    self._insert(setting,setting_value.clone());
+                    self._insert(setting, account.get(setting).unwrap().clone());
                 }
             }
+            self.accounts.push(account);
         }
         None
     }
