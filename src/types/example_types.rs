@@ -13,6 +13,7 @@ impl BoolStg {
         self.value
     }
 }
+#[typetag::serde]
 impl Setting for BoolStg {}
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -28,6 +29,7 @@ impl I32Stg {
         self.value
     }
 }
+#[typetag::serde]
 impl Setting for I32Stg {}
 
 #[cfg(test)]
@@ -36,11 +38,11 @@ mod tests {
     #[test]
     fn bool_stg_setting() {
         let bool_stg_setting = BoolStg::new(true);
-        let stg_fun: Stg = stg(bool_stg_setting.clone());
-        let stg_dot: Stg = bool_stg_setting.clone().stg();
-        assert_eq!(stg_fun, stg_dot);
-        let bool_stg_from: BoolStg = stg_fun.unstg();
-        let bool_stg_into: BoolStg = stg_dot.safe_unstg().unwrap();
+        let stg_fun: Box<dyn Setting> = stg(bool_stg_setting.clone());
+        let stg_dot: Box<dyn Setting> = bool_stg_setting.clone().stg();
+        assert!(stg_fun == stg_dot.clone());
+        let bool_stg_from: BoolStg = unstg(stg_fun);
+        let bool_stg_into: BoolStg = *safe_unstg(stg_dot).unwrap();
         assert_eq!(bool_stg_from, bool_stg_into);
         assert_eq!(bool_stg_setting, bool_stg_from);
         assert_eq!(bool_stg_setting, bool_stg_into);

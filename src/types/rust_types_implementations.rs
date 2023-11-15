@@ -1,60 +1,103 @@
 use crate::*;
 /*
-currently the types being added are most of the types that derive serde Deserialize per version 1.0.192
+currently the types being added are the types that derive serde Deserialize per version 1.0.192
 https://docs.rs/serde/latest/serde/de/trait.Deserialize.html#
 the types were obtained by doing a copy paste of the page above followed by multiple find and replace commands.
-exception being Cow<'a, T> where I additionally added "+ Setting"
+followed by commenting out any types that couldn't easily be added for the following reasons
+
 types not implemented:
+types that include any generic parameter. as #[typetag::serde] can't be added.
 types in rust unstable feature: !
-types in the serde rc feature: Ark, Rc, ArkWeak, and RcWeak.
+types in std::sync::atomic as they don't implement PartialEq needed for DynEq
 types that had some sort of lifetime error: str, std::path::Path, [u8], serde::de::IgnoredAny
 */
 
-
+#[typetag::serde]
 impl Setting for std::net::IpAddr{}
+#[typetag::serde]
 impl Setting for std::net::SocketAddr{}
+#[typetag::serde]
 impl Setting for bool{}
+#[typetag::serde]
 impl Setting for char{}
+#[typetag::serde]
 impl Setting for f32{}
+#[typetag::serde]
 impl Setting for f64{}
+#[typetag::serde]
 impl Setting for i8{}
+#[typetag::serde]
 impl Setting for i16{}
+#[typetag::serde]
 impl Setting for i32{}
+#[typetag::serde]
 impl Setting for i64{}
+#[typetag::serde]
 impl Setting for i128{}
+#[typetag::serde]
 impl Setting for isize{}
 /*
 impl Setting for !{}//Available on crate feature unstable only.
 */
+#[typetag::serde]
 impl Setting for u8{}
+#[typetag::serde]
 impl Setting for u16{}
+#[typetag::serde]
 impl Setting for u32{}
+#[typetag::serde]
 impl Setting for u64{}
+#[typetag::serde]
 impl Setting for u128{}
+#[typetag::serde(name = "unit")]
 impl Setting for (){}
+#[typetag::serde]
 impl Setting for usize{}
+#[typetag::serde]
 impl Setting for Box<str>{}//Available on crate features std or alloc only.{}
+#[typetag::serde]
 impl Setting for Box<std::ffi::CStr>{}//Available on crate features std or alloc only.{}
+#[typetag::serde]
 impl Setting for Box<std::ffi::OsStr>{}//Available on crate feature std and (Unix or Windows) only.{}
+#[typetag::serde]
 impl Setting for Box<std::path::Path>{}
+#[typetag::serde]
 impl Setting for std::ffi::CString{}//Available on crate features std or alloc only.{}
+#[typetag::serde]
 impl Setting for String{}//Available on crate features std or alloc only.{}
+#[typetag::serde]
 impl Setting for std::net::Ipv4Addr{}
+#[typetag::serde]
 impl Setting for std::net::Ipv6Addr{}
+#[typetag::serde]
 impl Setting for std::net::SocketAddrV4{}
+#[typetag::serde]
 impl Setting for std::net::SocketAddrV6{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroI8{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroI16{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroI32{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroI64{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroI128{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroIsize{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroU8{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroU16{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroU32{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroU64{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroU128{}
+#[typetag::serde]
 impl Setting for std::num::NonZeroUsize{}
+/*
 impl Setting for std::sync::atomic::AtomicBool{}//Available on crate feature // std and target_has_atomic="8"
 impl Setting for std::sync::atomic::AtomicI8{}//Available on crate feature // std and target_has_atomic="8"
 impl Setting for std::sync::atomic::AtomicI16{}//Available on crate feature // std and target_has_atomic="16"
@@ -66,10 +109,16 @@ impl Setting for std::sync::atomic::AtomicU16{}//Available on crate feature // s
 impl Setting for std::sync::atomic::AtomicU32{}//Available on crate feature // std and target_has_atomic="32"
 impl Setting for std::sync::atomic::AtomicU64{}//Available on crate feature // std and target_has_atomic="64"
 impl Setting for std::sync::atomic::AtomicUsize{}//Available on crate feature // std and target_has_atomic="ptr"
+*/
+#[typetag::serde]
 impl Setting for std::time::Duration{}
+#[typetag::serde]
 impl Setting for std::ffi::OsString{}//Available on crate feature std and (Unix or Windows) only.{}
+#[typetag::serde]
 impl Setting for std::path::PathBuf{}
+#[typetag::serde]
 impl Setting for std::time::SystemTime{}
+/*
 impl<'a, T> Setting for std::borrow::Cow<'a, T>
 where
     T: ToOwned + ?Sized + Setting,// added +Setting
@@ -95,7 +144,7 @@ where
     K: Setting + Eq + std::hash::Hash,
     V: Setting,
     S: std::hash::BuildHasher + Default,{}
-impl<T0: Setting> Setting for (T0,){}
+impl<T0: Setting + Clone> Setting for (T0,){}
 impl<T0: Setting, T1: Setting> Setting for (T0, T1){}
 impl<T0: Setting, T1: Setting, T2: Setting> Setting for (T0, T1, T2){}
 impl<T0: Setting, T1: Setting, T2: Setting, T3: Setting> Setting for (T0, T1, T2, T3){}
@@ -236,13 +285,13 @@ where
 */
 impl<T> Setting for Vec<T>
 where
-    T: Setting,{}//Available on crate features std or alloc only.{}
+    T: Setting+ Clone,{}//Available on crate features std or alloc only.{}
 impl<T> Setting for std::cell::Cell<T>
 where
     T: Setting + Copy,{}
 impl<T> Setting for std::num::Wrapping<T>
 where
-    T: Setting,{}
+    T: Setting+ Clone,{}
 impl<T, E> Setting for Result<T, E>
 where
     T: Setting,
@@ -266,30 +315,34 @@ where
     Box<T>: Setting,{}//Available on crate feature // rc and (crate features std or alloc)
 */
 impl<T: ?Sized> Setting for std::marker::PhantomData<T>{}
+ */
 /*
 impl<'de: 'a, 'a> Setting for &'a str{}
 impl<'de: 'a, 'a> Setting for &'a std::path::Path{}
 impl<'de: 'a, 'a> Setting for &'a [u8]{}
 impl Setting for serde::de::IgnoredAny{}
 */
+
 mod tests {
     #![allow(unused_imports)]
     use crate::*;
     #[test]
     fn bool_stg_conversion() {
         let bool = true;
-        let stg_fun: Stg = stg(bool);
-        let stg_dot: Stg = bool.stg();
-        assert_eq!(stg_fun, stg_dot);
+        let stg_fun: Box<dyn Setting> = stg(bool);
+        let stg_dot: Box<dyn Setting> = bool.stg();
+        assert!(stg_fun == stg_dot.clone());
         let stg_fu1 = stg_fun.clone();
         let stg_do1 = stg_fun.clone();
-        let bool_dot_unstg: bool = stg_fun.unstg();
-        let bool_dot_safe_unstg: bool = stg_dot.safe_unstg().unwrap();
+        let bool_dot_unstg: bool = unstg(stg_fun);
+        let bool_dot_safe_unstg: bool = *safe_unstg(stg_dot).unwrap();
         let bool_fun_unstg: bool = unstg(stg_fu1);
-        let bool_fun_safe_unstg: bool = safe_unstg(stg_do1).unwrap();
-        assert_eq!(bool_dot_unstg, bool);
-        assert_eq!(bool_fun_unstg, bool);
-        assert_eq!(bool_dot_unstg, bool_dot_safe_unstg);
-        assert_eq!(bool_fun_unstg, bool_fun_safe_unstg);
+        let bool_fun_safe_unstg: bool = *safe_unstg(stg_do1).unwrap();
+        assert!(bool_dot_unstg == bool);
+        assert!(bool_fun_unstg == bool);
+        assert!(bool_dot_unstg == bool_dot_safe_unstg);
+        assert!(bool_fun_unstg == bool_fun_safe_unstg);
     }
 }
+
+/**/
