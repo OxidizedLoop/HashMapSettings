@@ -8,8 +8,13 @@
 //! ```
 #![warn(missing_docs)]
 #![doc(test(attr(deny(warnings))))]
+#![feature(trait_upcasting)]
+use core::fmt::Debug;
+use dyn_clone::DynClone;
+use dyn_ord::DynEq;
 use serde::{Deserialize, Serialize};
 use std::{
+    any::Any,
     collections::{hash_map, HashMap, HashSet},
     option::Option,
 };
@@ -17,9 +22,9 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
-/// A [`HashMap`]`<`[`String`],[`Stg`]`>` with an associated name. May contain a [`Vec`] of other `Accounts`.
+/// A [`HashMap`]`<`[`String`],[`Box<dyn Setting>`]`>` with an associated name. May contain a [`Vec`] of other `Accounts`.
 ///
-/// The `HashMap` contains all the `Stg`s inside of all sub accounts.
+/// The `HashMap` contains all the `Box<dyn Setting>`s inside of all sub accounts.
 ///
 /// All sub accounts, need to be uniquely named.
 ///
@@ -28,11 +33,11 @@ use types::{constants::*, errors::*};
 /// ```
 /// # // todo!() add examples
 /// ```
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Account {
     name: String,
     active: bool,
-    settings: HashMap<String, Stg>,
+    settings: HashMap<String, Box<dyn Setting>>,
     //should contains all settings inside of accounts and its the default for this Account
     accounts: Vec<Account>,
     //list of all sub accounts, uniquely named.
@@ -44,7 +49,7 @@ impl Account {
     pub fn new(
         name: &str,
         active: bool,
-        settings: HashMap<String, Stg>,
+        settings: HashMap<String, Box<dyn Setting>>,
         accounts: Vec<Account>,
     ) -> Self {
         //doesn't check if Account is valid,consider using new_valid instead if it isn
@@ -58,7 +63,7 @@ impl Account {
     pub fn new_valid(
         name: &str,
         active: bool,
-        settings: HashMap<String, Stg>,
+        settings: HashMap<String, Box<dyn Setting>>,
         accounts: Vec<Account>,
     ) -> Result<Self, InvalidAccountError> {
         let new_account = Account {
@@ -136,7 +141,7 @@ impl Account {
     /// );
     ///
     /// ```
-    pub fn settings(&self) -> &HashMap<String, Stg> {
+    pub fn settings(&self) -> &HashMap<String, Box<dyn Setting>> {
         &self.settings
     }
     pub fn accounts(&self) -> &Vec<Account> {
@@ -250,12 +255,13 @@ impl Account {
             }
         }
     }
+    #[allow(clippy::borrowed_box)]
     pub fn deep_get(
         &self,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
         //left is the account we rename, right is the first child of the Account we call
         setting_name: &str,
-    ) -> Result<Option<&Stg>, DeepChangeError> {
+    ) -> Result<Option<&Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
@@ -308,16 +314,16 @@ impl Account {
     }
     /// Creates a `Cache` of the sub `Accounts`.
     ///
-    /// Does nothing if account name is [`CACHE`], 
+    /// Does nothing if account name is [`CACHE`],
     /// will update the cache if one already exists.
-    /// 
-    /// A `Cache` is a sub `Account` with a name created from the const [`CACHE`] 
+    ///
+    /// A `Cache` is a sub `Account` with a name created from the const [`CACHE`]
     /// and it's located at main `Account`.[len()](Account::len)-1
-    /// 
-    /// Having a `Cache` makes calling functions like [get()](Account::get) much faster 
+    ///
+    /// Having a `Cache` makes calling functions like [get()](Account::get) much faster
     /// as only `Cache` is checked instead of all sub `Accounts` in the `Vec`.
-    /// 
-    /// Verify if `Cache` exists with [contains_cache](Account::contains_cache) 
+    ///
+    /// Verify if `Cache` exists with [contains_cache](Account::contains_cache)
     /// and get it's position with [cache_position](Account::cache_position)
     ///
     /// # Panics
@@ -378,8 +384,8 @@ impl Account {
                                 setting,
                                 self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
                             );
-                        }  
-                    } 
+                        }
+                    }
                 }
             }
         }
@@ -401,8 +407,8 @@ impl Account {
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
         //left is where we insert the value, right is the first child of the Account we call
         setting_name: &str,
-        setting_value: Stg,
-    ) -> Result<Option<Stg>, DeepChangeError> {
+        setting_value: Box<dyn Setting>,
+    ) -> Result<Option<Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
@@ -446,17 +452,17 @@ impl Account {
     }
     /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
     ///
-    /// Won't return an error if the sub `Account` being pushed is invalid 
+    /// Won't return an error if the sub `Account` being pushed is invalid
     /// but will cause unintended behavior for future calls to the main `Account`.
     /// Use [push](Account::push) if the Account might be invalid.
     /// //todo!() put a link to what means for an Account to be invalid
-    /// 
+    ///
     /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
-    /// 
-    /// The `Cache` will always be at the end of the collection, so if the main `Account` 
-    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted 
+    ///
+    /// The `Cache` will always be at the end of the collection, so if the main `Account`
+    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted
     /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
-    /// 
+    ///
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -495,25 +501,26 @@ impl Account {
             if account.active() {
                 self.accounts.insert(cache_position, account.clone());
                 for setting in account.settings.keys() {
-                    if !account.contains_key(setting){
-                        self._insert(setting,account.get(setting).unwrap().clone());
-                        self.accounts[cache_position]._insert(setting, account.get(setting).unwrap().clone());
+                    if !account.contains_key(setting) {
+                        self._insert(setting, account.get(setting).unwrap().clone());
+                        self.accounts[cache_position]
+                            ._insert(setting, account.get(setting).unwrap().clone());
                     } else {
                         self.update_cache_of_setting(setting);
                     }
                 }
             } else {
                 for setting in account.settings.keys() {
-                    if !account.contains_key(setting){
-                        self._insert(setting,account.get(setting).unwrap().clone());
+                    if !account.contains_key(setting) {
+                        self._insert(setting, account.get(setting).unwrap().clone());
                     }
                 }
                 self.accounts.insert(cache_position, account);
             }
         } else {
             for setting in account.settings.keys() {
-                if !account.contains_key(setting){
-                    self._insert(setting,account.get(setting).unwrap().clone());
+                if !account.contains_key(setting) {
+                    self._insert(setting, account.get(setting).unwrap().clone());
                 }
             }
             self.accounts.push(account);
@@ -552,11 +559,11 @@ impl Account {
     ///
     /// Internally [`get()`](Account::get()) is called on all sub `Accounts` of the `Vec`
     /// starting at the end, followed by calling [`get()`](HashMap::get()) on the main `Account` `settings`.
-    /// Will return `Some`([Stg]) when found.
-    /// 
+    /// Will return `Some`([Box<dyn Setting>]) when found.
+    ///
     /// If there is a significant number of sub accounts it is recommend to create a `Cache` with [`cache()`](Account::cache) to improve performance.
-    /// Then there will be only one call of [`get()`](HashMap::get()) to `Cache` to obtain the desired [Stg].
-    /// 
+    /// Then there will be only one call of [`get()`](HashMap::get()) to `Cache` to obtain the desired [Box<dyn Setting>].
+    ///
     /// The key may be any borrowed form of the map's key type, but
     /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
     /// the key type.
@@ -571,7 +578,8 @@ impl Account {
     /// assert_eq!(account.get("a small number"), Some(&42.stg()));
     /// assert_eq!(account.get("a big number"), None);
     /// ```
-    pub fn get(&self, setting_name: &str) -> Option<&Stg> {
+    #[allow(clippy::borrowed_box)]
+    pub fn get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
         if let Some(position) = self.cache_position() {
             return self.accounts[position].get(setting_name);
         }
@@ -584,7 +592,11 @@ impl Account {
         }
         return self._get(setting_name);
     }
-    pub fn insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
+    pub fn insert(
+        &mut self,
+        setting_name: &str,
+        setting_value: Box<dyn Setting>,
+    ) -> Option<Box<dyn Setting>> {
         let mut return_value = None;
         if let Some(value) = self._insert(setting_name, setting_value.clone()) {
             return_value = Some(value);
@@ -624,12 +636,12 @@ impl Account {
     ///
     /// In the current implementation, iterating over keys takes O(capacity) time
     /// instead of O(len) because it internally visits empty buckets too.
-    pub fn keys(&self) -> hash_map::Keys<'_, String, Stg> {
+    pub fn keys(&self) -> hash_map::Keys<'_, String, Box<dyn Setting>> {
         self.settings.keys()
     }
     /// Returns the number of elements the map can hold without reallocating.
     ///
-    /// This number is a lower bound; the `HashMap<String, Stg>` might be able to hold
+    /// This number is a lower bound; the `HashMap<String, Box<dyn Setting>>` might be able to hold
     /// more, but is guaranteed to be able to hold at least this many.
     ///
     /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
@@ -654,15 +666,15 @@ impl Account {
     /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
     ///
     /// Will return an error if the sub `Account` being pushed is invalid or would make the main `Account` invalid.
-    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid. 
+    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
     /// //todo!() put a link to what means for an Account to be valid/invalid
-    /// 
+    ///
     /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
-    /// 
-    /// The `Cache` will always be at the end of the collection, so if the main `Account` 
-    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted 
+    ///
+    /// The `Cache` will always be at the end of the collection, so if the main `Account`
+    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted
     /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
-    /// 
+    ///
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -693,7 +705,7 @@ impl Account {
     ///         ],
     ///     )
     /// );
-    /// assert!(account.push(Account::new("3", Default::default(), Default::default(), Default::default())) 
+    /// assert!(account.push(Account::new("3", Default::default(), Default::default(), Default::default()))
     ///     == Some(InvalidAccountError::ExistingName));
     /// ```
     pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
@@ -713,16 +725,17 @@ impl Account {
             if account.active() {
                 self.accounts.insert(cache_position, account.clone());
                 for setting in account.settings.keys() {
-                    if !account.contains_key(setting){
+                    if !account.contains_key(setting) {
                         self._insert(setting, account.get(setting).unwrap().clone());
-                        self.accounts[cache_position]._insert(setting, account.get(setting).unwrap().clone());
+                        self.accounts[cache_position]
+                            ._insert(setting, account.get(setting).unwrap().clone());
                     } else {
                         self.update_cache_of_setting(setting);
                     }
                 }
             } else {
                 for setting in account.settings.keys() {
-                    if !account.contains_key(setting){
+                    if !account.contains_key(setting) {
                         self._insert(setting, account.get(setting).unwrap().clone());
                     }
                 }
@@ -730,7 +743,7 @@ impl Account {
             }
         } else {
             for setting in account.settings.keys() {
-                if !account.contains_key(setting){
+                if !account.contains_key(setting) {
                     self._insert(setting, account.get(setting).unwrap().clone());
                 }
             }
@@ -742,9 +755,9 @@ impl Account {
     /// is empty.
     ///
     /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
-    /// 
+    ///
     /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from the main `Account` present only on the popped sub `Account`.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -778,10 +791,10 @@ impl Account {
                 return None;
             }
             let popped_account = self.accounts.remove(position - 1);
-            if popped_account.active(){
+            if popped_account.active() {
                 for setting in popped_account.keys() {
                     self.update_cache_of_setting(setting)
-                }  
+                }
             }
             Some(popped_account)
         } else {
@@ -792,10 +805,10 @@ impl Account {
     /// is empty.
     ///
     /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
-    /// 
+    ///
     /// Will remove settings from the main `Account` present only on the popped sub `Account`.
     /// Use [pop](Account::pop) if you want the main `Account` settings to remain unchanged.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -829,28 +842,28 @@ impl Account {
                 return None;
             }
             let popped_account = self.accounts.remove(position - 1);
-            if popped_account.active(){
+            if popped_account.active() {
                 for setting in popped_account.keys() {
                     self.update_cache_of_setting(setting)
-                }  
+                }
             }
             popped_account
-        } else if let Some(popped_account) = self.accounts.pop(){
-            popped_account 
+        } else if let Some(popped_account) = self.accounts.pop() {
+            popped_account
         } else {
-            return None
+            return None;
         };
         for setting in popped_account.keys() {
-            if !self.vec_contains_key(setting){
+            if !self.vec_contains_key(setting) {
                 self.settings.remove(setting);
             }
         }
         Some(popped_account)
     }
-    fn vec_contains_key(&self,setting: &str) -> bool {
-        for account in self.accounts(){
+    fn vec_contains_key(&self, setting: &str) -> bool {
+        for account in self.accounts() {
             if account.contains_key(setting) {
-                return true
+                return true;
             }
         }
         false
@@ -875,7 +888,8 @@ impl Account {
     /// assert_eq!(account.get("a small number"), Some(&42.stg()));
     /// assert_eq!(account.get("a big number"), None);
     /// ```
-    fn _get(&self, setting_name: &str) -> Option<&Stg> {
+    #[allow(clippy::borrowed_box)]
+    fn _get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
         self.settings.get(setting_name)
     }
     /// Inserts a key-value pair into the map.
@@ -896,14 +910,18 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
-    /// assert_eq!(account.insert("a small number", 1.stg()),None);
+    /// assert_eq!(account.insert("a small number", 1.stg()), None);
     /// assert_eq!(account.settings().is_empty(), false);
     ///
     /// account.insert("a small number", 2.stg());
     /// assert_eq!(account.insert("a small number", 3.stg()), Some(2.stg()));
-    /// assert_eq!(account.settings()[&"a small number".to_string()], 3.stg());
+    /// assert!(account.settings()[&"a small number".to_string()] == 3.stg());
     /// ```
-    fn _insert(&mut self, setting_name: &str, setting_value: Stg) -> Option<Stg> {
+    fn _insert(
+        &mut self,
+        setting_name: &str,
+        setting_value: Box<dyn Setting>,
+    ) -> Option<Box<dyn Setting>> {
         self.settings
             .insert(setting_name.to_string(), setting_value)
     }
@@ -932,124 +950,64 @@ impl Default for Account {
         }
     }
 }
+
 /// Required trait for any type that that will be used as a setting
-pub trait Setting
-where
-    Self: Serialize + for<'a> Deserialize<'a>,
-{
-    ///turns a type implementing [Setting] into a [Stg]
+#[typetag::serde(tag = "setting")]
+pub trait Setting: Any + Debug + DynClone + DynEq {
+    ///turns a type implementing [Setting] into a [Box<dyn Setting>]
     ///
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Stg,stg,Setting};
+    /// use hashmap_settings::{stg,Setting};
     /// let bool = true;
-    /// let bool_stg: Stg = bool.stg();
-    /// assert_eq!(bool_stg, stg(bool))
+    /// let bool_stg: Box<dyn Setting> = bool.stg();
+    /// assert!(bool_stg == stg(bool))
     /// ```
-    fn stg(self) -> Stg
+    fn stg(self) -> Box<dyn Setting>
     where
-        Self: Setting,
+        Self: Setting + Sized
     {
-        Stg {
-            value: serde_json::to_string(&self).unwrap(),
-        }
+        Box::new(self)
     }
 }
-/// A intermediate type that [`Setting`] are converted to.
-///
-/// ```
-/// # // todo!() add examples
-/// ```
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Stg {
-    value: String,
-}
-impl Stg {
-    pub fn new<T: Setting>(value: &T) -> Stg {
-        Stg {
-            value: serde_json::to_string(&value).unwrap(),
-        }
-    }
-    pub fn get(&self) -> &str {
-        &self.value
-    }
-    ///turns a [`Stg`] into a type implementing [`Setting`],can [`panic!`]
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Stg,Setting};
-    ///
-    /// let bool_stg: Stg = true.stg();
-    /// assert_eq!(bool_stg.unstg::<bool>(), true);
-    /// //here we need to use ::<bool> to specify that want to turn bool_stg into a bool
-    /// ```
-    /// ```
-    /// use hashmap_settings::{Stg,Setting};
-    ///
-    /// let bool_stg: Stg = true.stg();
-    /// let bool :bool = bool_stg.unstg();
-    /// // here we don't as we specific the type annotation when we use :bool
-    /// assert_eq!(bool, true);
-    /// ```
-    ///
-    /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
-    /// Consider using [`safe_unstg`](`crate::Stg::safe_unstg`) as it returns a result type instead.
-    /// ```should_panic
-    /// use hashmap_settings::{Stg,Setting};
-    ///
-    /// let bool_stg: Stg = true.stg();
-    /// let _number :i32 = bool_stg.unstg();
-    /// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
-    ///
-    /// ```
-    pub fn unstg<T: Setting>(self) -> T {
-        serde_json::from_str(&self.value).unwrap() //unsafe, can panic
-    }
-    ///turns a [`Stg`] into a [`Result`] type implementing [`Setting`]
-    ///
-    /// ```
-    /// # // todo!() add examples
-    /// ```
-    pub fn safe_unstg<T: Setting>(self) -> Result<T, serde_json::Error> {
-        serde_json::from_str(&self.value)
+dyn_clone::clone_trait_object!(Setting);
+impl PartialEq for Box<dyn Setting> {
+    fn eq(&self, other: &Self) -> bool {
+        let x: Box<dyn DynEq> = self.clone();
+        let y: Box<dyn DynEq> = other.clone();
+        x == y
     }
 }
-///turns a type implementing [`Setting`] into a [`Stg`]
+
+///turns a type implementing [`Setting`] into a [`Box<dyn Setting>`]
 ///
 /// # Examples
 ///
 /// ```
-/// use hashmap_settings::{Stg,stg,Setting};
+/// use hashmap_settings::{stg,Setting};
 /// let bool = true;
-/// let bool_stg: Stg = stg(bool);
-/// assert_eq!(bool_stg, bool.stg())
+/// let bool_stg: Box<dyn Setting> = stg(bool);
+/// assert!(bool_stg == bool.stg())
 /// ```
-#[allow(dead_code)]
-pub fn stg<T>(value: T) -> Stg
-where
-    T: Setting,
-{
-    Stg {
-        value: serde_json::to_string(&value).unwrap(),
-    }
+pub fn stg<T: Setting>(value: T) -> Box<dyn Setting> {
+    value.stg()
 }
-///turns a [`Stg`] into a type implementing [`Setting`],can [`panic!`]
+///turns a [`Box<dyn Setting>`] into a type implementing [`Setting`],can [`panic!`]
 ///
 /// # Examples
 ///
 /// ```
-/// use hashmap_settings::{Stg,stg,unstg};
+/// use hashmap_settings::{Setting,stg,unstg};
 ///
-/// let bool_stg: Stg = stg(true);
+/// let bool_stg: Box<dyn Setting> = stg(true);
 /// assert_eq!(unstg::<bool>(bool_stg), true);
 /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
 /// ```
 /// ```
-/// use hashmap_settings::{Stg,stg,unstg};
+/// use hashmap_settings::{Setting,stg,unstg};
 ///
-/// let bool_stg: Stg = stg(true);
+/// let bool_stg: Box<dyn Setting> = stg(true);
 /// let bool :bool = unstg(bool_stg);
 /// // here we don't as we specific the type annotation when we use :bool
 /// assert_eq!(bool, true);
@@ -1057,32 +1015,27 @@ where
 /// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
 /// Consider using [`safe_unstg`] as it returns a result type instead.
 /// ```should_panic
-/// use hashmap_settings::{Stg,stg,unstg};
+/// use hashmap_settings::{Setting,stg,unstg};
 ///
-/// let bool_stg: Stg = stg(true);
+/// let bool_stg: Box<dyn Setting> = stg(true);
 /// let _number :i32 = unstg(bool_stg);
-/// // this panics, as the Stg holds a bool value but we are trying to convert it to a i32
+/// // this panics, as the Box<dyn Setting> holds a bool value but we are trying to convert it to a i32
 ///
 /// ```
-#[allow(dead_code)]
-pub fn unstg<T>(stg: Stg) -> T
-where
-    T: Setting,
-{
-    serde_json::from_str(stg.get()).unwrap() //unsafe can panic
+pub fn unstg<T: Setting>(stg: Box<dyn Setting>) -> T {
+    let x: Box<dyn Any> = stg;
+    *x.downcast().unwrap()
 }
-///turns a [`Stg`] into a [`Result`] type implementing [`Setting`]
+///turns a [`Box<dyn Setting>`] into a [`Result`] type implementing [`Setting`]
 ///
 /// ```
 /// # // todo!() add examples
 /// ```
-#[allow(dead_code)]
-pub fn safe_unstg<T>(stg: Stg) -> Result<T, serde_json::Error>
-where
-    T: Setting,
-{
-    serde_json::from_str(stg.get())
+pub fn safe_unstg<T: Setting>(stg: Box<dyn Setting>) -> Result<Box<T>, Box<dyn Any>> {
+    let x: Box<dyn Any> = stg;
+    x.downcast()
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1092,12 +1045,16 @@ mod tests {
         let bool_setting = true;
         let i32_setting = 42;
         let mut account = Account::default();
-        account._insert("bool_setting", Stg::new(&bool_setting));
+        account._insert("bool_setting", Box::new(bool_setting));
         account._insert("i32_setting", i32_setting.stg());
-        let i32s: i32 = account._get("i32_setting").unwrap().clone().unstg();
+        let i32s: i32 = unstg(account._get("i32_setting").unwrap().clone());
         assert_eq!(i32s, 42);
-        let stg: Stg = account._get("bool_setting").unwrap().clone();
-        assert!(stg.unstg::<bool>());
+        let stg: Box<dyn Setting> = account._get("bool_setting").unwrap().clone();
+        assert!(unstg::<bool>(stg));
+    }
+    #[test]
+    fn partialeq_test() {
+        assert!(true.stg() == true.stg());
     }
     #[test]
     fn account_new() {
