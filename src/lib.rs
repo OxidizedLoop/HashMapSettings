@@ -660,8 +660,22 @@ impl Account {
     pub fn len(&self) -> usize {
         self.accounts.len()
     }
+    /// Returns `true` if the `Vec` of child `Accounts` contains no elements.
+    ///
+    /// This method is a direct call to [`Vec`]'s [`is_empty()`](Vec::is_empty()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account = Account::default();
+    /// assert!(account.is_empty());
+    ///
+    /// account.push(Account::default());
+    /// assert!(!account.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.accounts.is_empty()
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
