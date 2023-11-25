@@ -304,6 +304,26 @@ impl Account {
         }
         false
     }
+    /// Returns the `Cache` index in the `Vec` of child `Accounts`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let mut account = Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     );
+    /// assert_eq!(account.cache_position(), None);
+    /// account.cache();
+    /// assert_eq!(account.cache_position(), Some(3));
+    /// ```
     pub fn cache_position(&self) -> Option<usize> {
         let size = self.accounts.len();
         if size > 0 && self.accounts[size - 1].name() == CACHE {
