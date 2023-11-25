@@ -1,4 +1,4 @@
-/// Errors involving Deep Functions
+/// Errors involving [Deep Functions](Account#deep-functions)
 #[derive(Debug, PartialEq)]
 pub enum DeepChangeError {
     /// Error of providing a name of a sub Account that doesn't exist
@@ -6,7 +6,7 @@ pub enum DeepChangeError {
     /// Error of providing a empty `Vec` to a deep function
     EmptyVec,
 }
-/// Errors involving Deep Functions
+/// Errors involving Account [validity](Account#valid)
 #[derive(Debug, PartialEq)]
 pub enum InvalidAccountError {
     /// Error of trying to do a action that will lead to two `Accounts` having the same name.
