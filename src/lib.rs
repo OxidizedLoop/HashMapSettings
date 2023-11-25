@@ -22,28 +22,174 @@ use std::{
 pub mod types;
 use types::{constants::*, errors::*};
 
-/// A [`HashMap`]`<`[`String`],[`Box<dyn Setting>`]`>` with an associated name. May contain a [`Vec`] of other `Accounts`.
+/// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
+/// 
+/// todo!() description
+/// An Account is a Wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
+/// 
+/// An Account can also hold other [Accounts](Account#accounts). This allows for complex systems where 
+/// an app can have multiple layers of settings. The top most layer being the first one to be searched
+/// for a specific setting, and in the case it isn't found the next layer will be search, this will be
+/// done until the setting is found on the last layer that would be the default layer containing all the settings.
+/// 
+/// 
+/// 
+/// An `Account` contains the following fields:
+/// 
+///  - [name](Account#name): [`String`],
+/// 
+///  - [active](Account#active): [`bool`],
+/// 
+///  - [settings](Account#settings): [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>>,
+/// 
+///  - [accounts](Account#accounts): [`Vec`]<`Account`>,
 ///
-/// The `HashMap` contains all the `Box<dyn Setting>`s inside of all sub accounts.
+/// 
+/// # New Account
 ///
-/// All sub accounts, need to be uniquely named.
+/// Currently a new Account can be created with:
+///  - [new](Account::new): Create a new Account.
+/// 
+///  - [new_valid](Account::new_valid): Create a new Account that is guaranteed to be [valid](Account#valid).
+/// 
+///  - [clone][Clone::clone]: Clone an existing Account.
+/// 
+/// An `AccountBuilder` is planned to be created in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20).
+/// 
+/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but child 
+/// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
+/// 
+/// 
+/// # [Name](Account#name)
+/// 
+/// 
+/// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`. 
+/// For this reason child `Accounts` need to be uniquely named to be [valid](Account#valid).
+/// 
+///  - [name](Account::name): Get an account's name 
+/// 
+///  - [rename](Account::rename): Rename an `Account`
+/// 
+///  - [deep_rename](Account::deep_rename): Rename a [child](Account#accounts)  `Accounts`
+/// 
+/// 
+/// # [Active](Account#active)
+/// 
+/// 
+/// If a child `Account` is inactive it will be ignore by certain methods like [get()](Account::get) 
+/// when this are called on the parent `Account`.
+/// 
+///  - [active](Account::active): Get an account's activity state
+/// 
+///  - [change_activity](Account::change_activity): Change the activity 
+/// 
+///  - [deep_change_activity](Account::deep_change_activity): Change the activity of one of the child `Accounts` 
+/// 
+/// 
+/// # [Settings](Account#settings)
+/// 
+/// 
+/// A `HashMap` holding [Settings](Setting). Contains all the settings present in the
+/// [child](Account#accounts) Accounts but can contain settings that aren't in them.
+/// 
+///  - [accounts()](Account::accounts) Get an account's child `Accounts` 
+/// 
+///  - [get](Account::get): Returns a reference to the value corresponding to the key
+/// 
+///  - [deep_get](Account::deep_get): Returns a reference to the value corresponding to the key on a child Account
+/// 
+///  - [insert](Account::insert): Inserts a key-value pair into the map.
+/// 
+///  - [deep_insert](Account::deep_insert):Inserts a key-value pair into the map of a child Account
+/// 
+///  - [keys](Account::keys): An iterator visiting all keys in arbitrary order 
+/// 
+///  - [contains_key](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
+/// 
+///  - [capacity](Account::capacity): Returns the number of elements the map can hold without reallocating.
+/// 
+/// 
+/// # [Accounts](Account#accounts)
+/// 
+/// 
+/// A `Vec` of Accounts. The Account that holds the `Vec` is the parent Account and the Accounts that are being held
+/// are the child Accounts.
+/// 
+///  - [accounts()](Account::accounts): Get an Account's child `Accounts`
+/// 
+///  - [len](Account::len): Returns the number of elements in the `Vec`.
+/// 
+///  - [is_empty](Account::is_empty): Returns `true` if the `Vec` contains no elements.
+/// 
+///  - [push](Account::push): Appends an `Account` to the back of the `Vec`.
+/// 
+///  - [pop](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
+/// 
+///  - [pop_remove](Account::pop_remove): [pop](Account::pop) but also removes the settings from the main account.
+/// 
+/// 
+/// # [Cache](Account#cache)
+/// 
+/// 
+/// Having a `Cache` makes calling functions like [get()](Account::get) much faster
+/// as only `Cache` is checked for the value instead of all [child](Account#accounts) `Accounts`.
+/// 
+/// Having a `Cache` will occupy extra space and make some actions like [insert()](Account::insert) slower.
+/// 
+/// A `Cache` will have the name off [`CACHE`].
+/// 
+///  - Created and updated with [cache()](Account::cache)
+/// 
+///  - Destroy with [delete_cache()](Account::delete_cache)
+/// 
+///  - Check if it exists with [contains_cache()](Account::contains_cache)
+/// 
+///  - Get it's position in the [child](Account#accounts) with [cache_position()](Account::cache_position)
+/// 
+///  - Get the [Vec](Account#accounts) size without `Cache` with [len_without_cache()](Account::len_without_cache)
 ///
-/// len()-1 of the `Vec` is the cache if one is created with [`cache`](Account::cache).
+/// 
+/// # [Valid](Account#valid)
+///  
+/// A valid `Account` is one where it's methods will always behave as intended. 
+/// 
+/// There are certain methods that may make an Account invalid if improperly used, 
+/// and that would make other methods have unindent effects.
+/// 
+/// If a method can make an `Account` invalid it will be mentioned.
+/// 
+/// ## Validity Defined:
+/// For an `Account` to be valid it needs to follow the following requirements:
+/// 
+///  - It's child `Accounts` are valid.
+/// 
+///  - It's child `Accounts` have unique names.
+/// 
+///  - If a [`Cache`](Account#cache) exists it's the last element of the `Vec`.
+/// 
+/// It's NOT yet implemented but it's intended that the following are also true:
+/// 
+///  - The `Account` contains all settings in the child `Accounts`.
+/// 
+///  - The [`Cache`](Account#cache) contain all setting in the `Account`.
+/// 
+/// 
+/// # [Deep Functions](Account#deep-functions)
 ///
-/// ```
-/// # // todo!() add examples
-/// ```
+/// 
+/// Deep Functions are versions of functions to interact with a child `Account` 
+/// of the parent `Account` that the function is called.
+///
+/// They accept an extra `Vec` of `&str` that are the list of child `Accounts` 
+/// you have to pass though to get to the child `Account` the function will be called.
+///
+/// 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Account {
     name: String,
     active: bool,
     settings: HashMap<String, Box<dyn Setting>>,
-    //should contains all settings inside of accounts and its the default for this Account
     accounts: Vec<Account>,
-    //list of all sub accounts, uniquely named.
-    //len()-1 is the cache if one is created.
-    //last element of the vec contains the most important setting, the one that will be used by the program.
-    //cache must contain all settings at all times if it exists
 }
 impl Account {
     /// Creates a new account
