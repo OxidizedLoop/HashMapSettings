@@ -190,7 +190,78 @@ impl Account {
             true
         }
     }
-    /// Takes a `&str` and updates the name of the `Account`
+    /// Takes a `bool` and changes the value of active of a child `Account`.
+    /// 
+    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`change_activity`](Account::change_activity) in this case.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new("3_2", true, Default::default(), Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         ])
+    ///     ],
+    /// );
+    /// 
+    /// assert_eq!(account.deep_change_activity(false,&mut vec!["3_2","3"]), Ok(true));
+    /// assert_eq!(account, Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new("3_2", false, Default::default(), Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         ])
+    ///     ],
+    /// ));
+    /// ```
+    pub fn deep_change_activity(
+        &mut self,
+        new_active: bool,
+        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
+        //left is the account we rename, right is the first child of the Account we call
+    ) ->Result<bool,DeepChangeError> {
+        let account_to_find = if let Some(account_name) = account_names.pop() {
+            account_name
+        } else {
+            return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        match account_to_find {
+            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Modify)),
+            n => {
+                if let Some(found_account) = self.mut_account_from_name(n) {
+                    match found_account.deep_change_activity(new_active, account_names) {
+                        //recursive call
+                        Err(error) => match error {
+                            DeepChangeError::EmptyVec => {
+                                Ok(found_account.change_activity(new_active))
+                            } //base case
+                            _ => Err(error), //error, impossible/invalid function call
+                        },
+                        Ok(value) => Ok(value),
+                    }
+                } else {
+                    Err(DeepChangeError::NotFound)
+                }
+            }
+        }
+    }
+    /// Takes a `&str` and updates the name of the `Account`.
     ///
     /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
     ///
@@ -198,15 +269,20 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default(), Default::default());
-    ///
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default()
+    /// );
+    /// assert_eq!(account.name(), "Old Name");
     /// account.rename("New Name");
     /// assert_eq!(account.name(), "New Name");
     /// ```
     ///
     /// ```
     /// use hashmap_settings::{Account,types::errors::CacheError};
-    /// let mut account : Account = Account::new("Old Name", Default::default(), Default::default(), Default::default());
+    /// let mut account= Account::new("Old Name", Default::default(), Default::default(), Default::default());
     ///
     /// assert_eq!(account.name(), "Old Name");
     ///
