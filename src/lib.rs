@@ -442,7 +442,7 @@ impl Account {
             }
         }
     }
-    fn get_mut_from_name(&mut self, name: &str) -> Option<&mut Account> {
+    fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Account> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&mut self.accounts[account]);
