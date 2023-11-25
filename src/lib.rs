@@ -312,19 +312,10 @@ impl Account {
         }
         None
     }
-    /// Creates a `Cache` of the sub `Accounts`.
+    /// Creates or updates a `Cache` of the child `Accounts`.
     ///
-    /// Does nothing if account name is [`CACHE`],
-    /// will update the cache if one already exists.
-    ///
-    /// A `Cache` is a sub `Account` with a name created from the const [`CACHE`]
-    /// and it's located at main `Account`.[len()](Account::len)-1
-    ///
-    /// Having a `Cache` makes calling functions like [get()](Account::get) much faster
-    /// as only `Cache` is checked instead of all sub `Accounts` in the `Vec`.
-    ///
-    /// Verify if `Cache` exists with [contains_cache](Account::contains_cache)
-    /// and get it's position with [cache_position](Account::cache_position)
+    /// `true` will be returned if a `Cache` was created, otherwise the
+    /// `Cache` will be updated and false will be returned.
     ///
     /// # Panics
     ///
@@ -344,7 +335,7 @@ impl Account {
     ///         Account::new("2", true, Default::default(), Default::default())
     ///     ],
     /// );
-    /// account.cache();
+    /// assert_eq!(account.cache(),true);
     /// assert!(account ==
     ///     Account::new(
     ///         Default::default(),
@@ -358,37 +349,39 @@ impl Account {
     ///     )
     /// )
     /// ```
-    pub fn cache(&mut self) {
-        if self.name() != CACHE {
-            if !self.contains_cache() {
-                self.accounts.push(Account::new(
-                    CACHE,
-                    true,
-                    Default::default(),
-                    Default::default(),
-                ));
-            }
-            let cache_position = self.cache_position().unwrap();
-            self.accounts[cache_position]
-                .settings
-                .reserve(self.settings.capacity()); //this assumes that Account.settings contains all settings and isn't empty
-            for setting in self.settings.keys() {
-                //this assumes that Account.settings contains all settings and isn't empty
-                for account in (0..cache_position).rev() {
-                    if self.accounts[account].active() {
-                        if let Some(value) = self.accounts[account].get(setting) {
-                            let temp = value.clone(); //to prevent cannot borrow `self.sub_accounts` as mutable because it is also borrowed as immutable Error
-                            self.accounts[cache_position].insert(setting, temp);
-                        } else {
-                            self.accounts[cache_position].insert(
-                                setting,
-                                self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
-                            );
-                        }
+    pub fn cache(&mut self) -> bool{
+        let r_value = !self.contains_cache();
+        if r_value {
+            self.accounts.push(Account::new(
+                CACHE,
+                true,
+                Default::default(),
+                Default::default(),
+            ));
+        }
+        let cache_position = self.cache_position().unwrap();
+        self.accounts[cache_position]
+            .settings.clear();
+        self.accounts[cache_position]
+            .settings
+            .reserve(self.settings.capacity()); //this assumes that Account.settings contains all settings and isn't empty
+        for setting in self.settings.keys() {
+            //this assumes that Account.settings contains all settings and isn't empty
+            for account in (0..cache_position).rev() {
+                if self.accounts[account].active() {
+                    if let Some(value) = self.accounts[account].get(setting) {
+                        let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
+                        self.accounts[cache_position].insert(setting, temp);
+                    } else {
+                        self.accounts[cache_position].insert(
+                            setting,
+                            self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
+                        );
                     }
                 }
             }
         }
+        r_value
     }
     /// Deletes `Cache` if one exists.
     ///
