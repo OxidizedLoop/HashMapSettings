@@ -109,7 +109,12 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account : Account = Account::new("New account", Default::default(), Default::default(), Default::default());
+    /// let account : Account = Account::new(
+    ///     "New account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default()
+    /// );
     ///
     /// assert_eq!(account.name(), "New account");
     /// ```
