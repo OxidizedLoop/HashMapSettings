@@ -296,6 +296,29 @@ impl Account {
     pub fn accounts_names(&self) -> Vec<&str> {
         self.accounts.iter().map(|a| a.name()).collect()
     }
+    /// Returns `true` if the `Vec` of child `Accounts` contains no `Cache`.
+    ///
+    /// `Cache` can be created with [`cache`](Account::cache)
+    /// and deleted with [`delete_cache`](Account::delete_cache)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let mut account = Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     );
+    /// assert!(!account.contains_cache());
+    /// account.cache();
+    /// assert!(account.contains_cache());
+    /// ```
     pub fn contains_cache(&self) -> bool {
         let size = self.accounts.len();
         if size > 0 && self.accounts[size - 1].name() == CACHE {
