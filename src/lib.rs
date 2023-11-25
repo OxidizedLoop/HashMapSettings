@@ -751,12 +751,12 @@ impl Account {
         }
         None
     }
-    /// Removes the last element from a vector and returns it, or [`None`] if it
-    /// is empty.
+    /// Removes the last element from a vector and returns it, or [`None`] if it is empty.
     ///
-    /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
+    /// Will not pop `Cache` if there is one, but will pop the next child `Account`. `Cache` values will be updated.
     ///
-    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from the main `Account` present only on the popped sub `Account`.
+    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from 
+    /// the main `Account` present only on the popped child `Account`.
     ///
     /// # Examples
     ///
