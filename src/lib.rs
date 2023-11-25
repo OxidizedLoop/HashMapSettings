@@ -450,18 +450,17 @@ impl Account {
         }
         None
     }
-    /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
+    /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
-    /// Won't return an error if the sub `Account` being pushed is invalid
+    /// Won't return an error if the child `Account` being pushed is [invalid](Account#valid)
     /// but will cause unintended behavior for future calls to the main `Account`.
-    /// Use [push](Account::push) if the Account might be invalid.
-    /// //todo!() put a link to what means for an Account to be invalid
+    /// Use [push](Account::push) if the Account might be [invalid](Account#valid).
     ///
-    /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
     /// The `Cache` will always be at the end of the collection, so if the main `Account`
-    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted
-    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
+    /// [contains_cache](Account::contains_cache) then the child `Account` will be inserted
+    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of child `Account` is false.
     ///
     /// # Panics
     ///
