@@ -255,37 +255,67 @@ impl Account {
             }
         }
     }
+    /// Returns a reference to the value corresponding to the key in a child `Account`.
+    /// 
+    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`get`](Account::get) in this case.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new(
+    ///                 "3_2", 
+    ///                 true, 
+    ///                 HashMap::from([
+    ///                     ("int".to_string(),42.stg()),
+    ///                     ("bool".to_string(),true.stg()),
+    ///                     ("char".to_string(),'c'.stg()),
+    ///                 ]), 
+    ///                 Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    /// 
+    /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&42.stg())));
+    /// ```
     #[allow(clippy::borrowed_box)]
     pub fn deep_get(
         &self,
+        setting_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
         //left is the account we rename, right is the first child of the Account we call
-        setting_name: &str,
     ) -> Result<Option<&Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        match account_to_find {
-            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Inserting)),
-            n => {
-                if let Some(found_account) = self.get_from_name(n) {
-                    match found_account.deep_get(account_names, setting_name) {
-                        //recursive call
-                        Err(error) => match error {
-                            DeepChangeError::EmptyVec => Ok(found_account.get(setting_name)), //base case
-                            _ => Err(error), //error, impossible/invalid function call
-                        },
-                        Ok(value) => Ok(value),
-                    }
-                } else {
-                    Err(DeepChangeError::NotFound)
-                }
+        if let Some(found_account) = self.account_from_name(account_to_find) {
+            match found_account.deep_get(setting_name, account_names) {
+                //recursive call
+                Err(error) => match error {
+                    DeepChangeError::EmptyVec => Ok(found_account.get(setting_name)), //base case
+                    _ => Err(error), //error, impossible/invalid function call
+                },
+                Ok(value) => Ok(value),
             }
+        } else {
+            Err(DeepChangeError::NotFound)
         }
     }
-    fn get_from_name(&self, name: &str) -> Option<&Account> {
+    fn account_from_name(&self, name: &str) -> Option<&Account> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&self.accounts[account]);
