@@ -46,13 +46,55 @@ pub struct Account {
     //cache must contain all settings at all times if it exists
 }
 impl Account {
+    /// Creates a new account
+    ///
+    /// The is no [validity](Account#valid) check, so the account created can be an invalid account.
+    /// Use [`new_valid`](Account::new_valid) to make sure that the account created is valid.
+    ///
+    /// It's recommend that the parent `Accounts` are made with [`new_valid`](Account::new_valid)
+    /// but child `Accounts` are made with with `new` to avoid repeated validity checks.
+    /// 
+    /// # Example
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let account : Account = Account::new(
+    ///     "New Account",
+    ///     true,
+    ///     HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ]),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.name(), "New Account");
+    /// assert!(account.active());
+    /// assert!(account.settings() ==
+    ///     &HashMap::from([
+    ///         ("int".to_string(),42.stg()),
+    ///         ("bool".to_string(),true.stg())
+    ///     ])
+    /// );
+    /// assert!(account.accounts() ==
+    ///     &vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    ///
+    /// ```
     pub fn new(
         name: &str,
         active: bool,
         settings: HashMap<String, Box<dyn Setting>>,
         accounts: Vec<Account>,
     ) -> Self {
-        //doesn't check if Account is valid,consider using new_valid instead if it isn
         Account {
             name: name.to_string(),
             active,
