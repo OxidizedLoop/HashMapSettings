@@ -1001,6 +1001,33 @@ impl Account {
                     Err(DeepChangeError::NotFound)
                 }
             }
+    /// Updates a setting with the value its supposed to have.
+    /// 
+    /// 
+    /// 
+    /// Returns `None` if the setting isn't present in the Account or child Accounts.
+    /// Returns true if the value of the setting was updated.
+    /// 
+    /// If an Account is [valid](Account#valid) this method never returns Some(true) 
+    /// as this method is used to turn an invalid Account into a valid one.
+    /// 
+    /// # Examples
+    /// ```
+    ///  //todo!() add example
+    /// ```
+    pub fn update_setting(&mut self, setting: &str) -> Option<bool> {
+        for account in (0..self.len()).rev() {
+            if self.accounts[account].active() {
+                if let Some(value) = self.accounts[account].get(setting) {
+                    let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
+                    return Some(!(self.insert(setting, temp.clone()) == Some(temp)))
+                }//todo!()improve this so cloning twice isn't necessary
+            }
+        }
+        if self.settings.contains_key(setting) {
+            Some(false)
+        } else {
+            None
         }
     }
     fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Account> {
