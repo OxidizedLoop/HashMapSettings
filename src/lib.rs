@@ -293,6 +293,26 @@ impl Account {
         }
         None
     }
+    /// Return a `Vec` of names of the child `Accounts`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let account : Account = Account::new(
+    ///     "New Account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    ///
+    /// assert!(account.accounts_names() == vec!["1","2","3"]);
+    ///
+    /// ```
     pub fn accounts_names(&self) -> Vec<&str> {
         self.accounts.iter().map(|a| a.name()).collect()
     }
