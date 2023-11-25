@@ -657,6 +657,27 @@ impl Account {
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
+    /// Returns the number of elements in the `Vec` of child `Accounts`,
+    /// also referred to as its 'length'.
+    ///
+    /// This method is a direct call to [`Vec`]'s [`len()`](Vec::len()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let account = Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     );
+    /// assert_eq!(account.len(), 3);
+    /// ```
     pub fn len(&self) -> usize {
         self.accounts.len()
     }
