@@ -60,6 +60,57 @@ impl Account {
             accounts,
         }
     }
+    /// Creates a new [valid](Account#valid) account
+    ///
+    /// This lets you create an `Account` that is sure to be fully valid
+    /// including it's child `Accounts` or an error is returned.
+    ///
+    /// It's recommend that parent `Accounts` are made with `new_valid` but child 
+    /// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let account = Account::new_valid(
+    ///     "New Account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// assert_eq!(account, Ok(Account::new(
+    ///     "New Account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// )));
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// ```
+    /// use hashmap_settings::types::errors::InvalidAccountError;
+    /// use hashmap_settings::Account;
+    /// let account = Account::new_valid(
+    ///     "New Account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("1", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// assert_eq!(account, Err(InvalidAccountError::ExistingName));
+    /// ```
     pub fn new_valid(
         name: &str,
         active: bool,
