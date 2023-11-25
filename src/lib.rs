@@ -144,6 +144,32 @@ impl Account {
     pub fn settings(&self) -> &HashMap<String, Box<dyn Setting>> {
         &self.settings
     }
+    /// Return a reference to the `Vec` of child `Accounts`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let account : Account = Account::new(
+    ///     "New Account",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    ///
+    /// assert!(account.accounts() ==
+    ///     &vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    ///
+    /// ```
     pub fn accounts(&self) -> &Vec<Account> {
         &self.accounts
     }
