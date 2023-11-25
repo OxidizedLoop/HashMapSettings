@@ -663,17 +663,17 @@ impl Account {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    /// Appends an `Account` to the back of the `Vec` of sub `Accounts`.
+    /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
-    /// Will return an error if the sub `Account` being pushed is invalid or would make the main `Account` invalid.
+    /// Will return an error if the child `Account` being pushed is invalid or would make the main `Account` invalid.
     /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
     /// //todo!() put a link to what means for an Account to be valid/invalid
     ///
-    /// This sub `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
     /// The `Cache` will always be at the end of the collection, so if the main `Account`
-    /// [contains_cache](Account::contains_cache) then the sub `Account` will be inserted
-    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of sub Account is false.
+    /// [contains_cache](Account::contains_cache) then the child `Account` will be inserted
+    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of child `Account` is false.
     ///
     /// # Panics
     ///
@@ -711,7 +711,7 @@ impl Account {
     pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
         if account.name() == CACHE {
             //check if account isn't named Cache
-            return Some(InvalidAccountError::Cache(CacheError::Inserting));
+            return Some(InvalidAccountError::Cache(CacheError::Creating));
         }
         if self.accounts_names().contains(&account.name()) {
             //check if account has the same name as a sibling account
