@@ -20,7 +20,7 @@ use std::{
 };
 /// module containing types used internally by the crate
 pub mod types;
-use types::{constants::*, errors::*};
+use types::errors::*;
 
 /// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
 /// 
@@ -124,29 +124,8 @@ use types::{constants::*, errors::*};
 /// 
 ///  - [pop](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 /// 
-///  - [pop_remove](Account::pop_remove): [pop](Account::pop) but also removes the settings from the main account.
+///  - [pop_remove](Account::pop_remove): [pop](Account::pop) but also removes the settings from the main account. Cache
 /// 
-/// 
-/// # [Cache](Account#cache)
-/// 
-/// 
-/// Having a `Cache` makes calling functions like [get()](Account::get) much faster
-/// as only `Cache` is checked for the value instead of all [child](Account#accounts) `Accounts`.
-/// 
-/// Having a `Cache` will occupy extra space and make some actions like [insert()](Account::insert) slower.
-/// 
-/// A `Cache` will have the name off [`CACHE`].
-/// 
-///  - Created and updated with [cache()](Account::cache)
-/// 
-///  - Destroy with [delete_cache()](Account::delete_cache)
-/// 
-///  - Check if it exists with [contains_cache()](Account::contains_cache)
-/// 
-///  - Get it's position in the [child](Account#accounts) with [cache_position()](Account::cache_position)
-/// 
-///  - Get the [Vec](Account#accounts) size without `Cache` with [len_without_cache()](Account::len_without_cache)
-///
 /// 
 /// # [Valid](Account#valid)
 ///  
@@ -164,13 +143,9 @@ use types::{constants::*, errors::*};
 /// 
 ///  - It's child `Accounts` have unique names.
 /// 
-///  - If a [`Cache`](Account#cache) exists it's the last element of the `Vec`.
-/// 
 /// It's NOT yet implemented but it's intended that the following are also true:
 /// 
 ///  - The `Account` contains all settings in the child `Accounts`.
-/// 
-///  - The [`Cache`](Account#cache) contain all setting in the `Account`.
 /// 
 /// 
 /// # [Deep Functions](Account#deep-functions)
@@ -317,9 +292,6 @@ impl Account {
         }
     }
     fn is_invalid(&self) -> Option<InvalidAccountError> {
-        //valid means that Account don't have the same name as Siblings account,
-        //and that if cache exists is at the end of the vector;
-        //this checks children accounts as well
         let accounts = self.accounts_names();
         let size = accounts.len();
         let mut hash_set = HashSet::with_capacity(size);
@@ -327,10 +299,6 @@ impl Account {
             if !hash_set.insert(account) {
                 return Some(InvalidAccountError::ExistingName);
             }
-        }
-        if hash_set.get(CACHE).is_some() && self.accounts[size - 1].name() == CACHE {
-            // if .is_some is false it won't check the second part
-            return Some(InvalidAccountError::WronglyPositionedCache);
         }
         drop(hash_set); // dropping map here as it isn't needed anymore and being a recursive function the memory usage would keep increasing.
                         //todo!() check if it's dropped automatically by the compiler.
@@ -510,30 +478,25 @@ impl Account {
         } else {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        match account_to_find {
-            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Modify)),
-            n => {
-                if let Some(found_account) = self.mut_account_from_name(n) {
-                    match found_account.deep_change_activity(new_active, account_names) {
-                        //recursive call
-                        Err(error) => match error {
-                            DeepChangeError::EmptyVec => {
-                                Ok(found_account.change_activity(new_active))
-                            } //base case
-                            _ => Err(error), //error, impossible/invalid function call
-                        },
-                        Ok(value) => Ok(value),
-                    }
-                } else {
-                    Err(DeepChangeError::NotFound)
-                }
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_change_activity(new_active, account_names) {
+                //recursive call
+                Err(error) => match error {
+                    DeepChangeError::EmptyVec => {
+                        Ok(found_account.change_activity(new_active))
+                    } //base case
+                    _ => Err(error), //error, impossible/invalid function call
+                },
+                Ok(value) => Ok(value),
             }
+        } else {
+            Err(DeepChangeError::NotFound)
         }
     }
     /// Takes a `&str` and updates the name of the `Account`.
     ///
-    /// returns a [`CacheError`] if the new name or old name are [`Cache`](CACHE)
-    ///
+    /// Returns the previous name that the Account had.
+    /// 
     /// # Examples
     ///
     /// ```
@@ -545,35 +508,23 @@ impl Account {
     ///     Default::default()
     /// );
     /// assert_eq!(account.name(), "Old Name");
-    /// account.rename("New Name");
+    /// assert_eq!(account.rename("New Name"), "Old Name".to_string());
     /// assert_eq!(account.name(), "New Name");
     /// ```
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,types::errors::CacheError};
-    /// let mut account= Account::new("Old Name", Default::default(), Default::default(), Default::default());
-    ///
-    /// assert_eq!(account.name(), "Old Name");
-    ///
-    /// assert!(account.rename("Cache") == Some(CacheError::Naming));
-    /// assert_ne!(account.name(), "Cache");
-    /// assert_eq!(account.name(), "Old Name");
-    /// ```
-    pub fn rename(&mut self, new_name: &str) -> Option<CacheError> {
-        if self.name() == CACHE {
-            return Some(CacheError::Renaming);
-        }
-        if new_name == CACHE {
-            return Some(CacheError::Naming);
-        }
+    pub fn rename(&mut self, new_name: &str) -> String {
+        let r_value = self.name.clone();
         self.name = new_name.to_string();
-        None
+        r_value
+        
     }
     /// Takes a `&str` and updates the name of a child `Account`.
     /// 
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
     ///
+    /// This can make a Account [invalid](Account#valid) if the child Account 
+    /// got renamed to the same name as one of it's siblings.
+    /// 
     /// # Examples
     ///
     /// ```
@@ -593,7 +544,7 @@ impl Account {
     ///     ],
     /// );
     /// 
-    /// assert_eq!(account.deep_rename("Cool Name",&mut vec!["3_2","3"]), Ok(None));
+    /// assert_eq!(account.deep_rename("Cool Name",&mut vec!["3_2","3"]), Ok("3_2".to_string()));
     /// assert_eq!(account, Account::new(
     ///     "Old Name",
     ///     Default::default(),
@@ -614,30 +565,25 @@ impl Account {
         new_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
         //left is the account we rename, right is the first child of the Account we call
-    ) ->Result<Option<CacheError>,DeepChangeError> {
+    ) ->Result<String,DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        match account_to_find {
-            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Modify)),
-            n => {
-                if let Some(found_account) = self.mut_account_from_name(n) {
-                    match found_account.deep_rename(new_name, account_names) {
-                        //recursive call
-                        Err(error) => match error {
-                            DeepChangeError::EmptyVec => {
-                                Ok(found_account.rename(new_name))
-                            } //base case
-                            _ => Err(error), //error, impossible/invalid function call
-                        },
-                        Ok(value) => Ok(value),
-                    }
-                } else {
-                    Err(DeepChangeError::NotFound)
-                }
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_rename(new_name, account_names) {
+                //recursive call
+                Err(error) => match error {
+                    DeepChangeError::EmptyVec => {
+                        Ok(found_account.rename(new_name))
+                    } //base case
+                    _ => Err(error), //error, impossible/invalid function call
+                },
+                Ok(value) => Ok(value),
             }
+        } else {
+            Err(DeepChangeError::NotFound)
         }
     }
     /// Returns a reference to the value corresponding to the key in a child `Account`.
@@ -731,204 +677,11 @@ impl Account {
     pub fn accounts_names(&self) -> Vec<&str> {
         self.accounts.iter().map(|a| a.name()).collect()
     }
-    /// Returns `true` if the `Vec` of child `Accounts` contains no `Cache`.
-    ///
-    /// `Cache` can be created with [`cache`](Account::cache)
-    /// and deleted with [`delete_cache`](Account::delete_cache)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::Account;
-    /// let mut account = Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     );
-    /// assert!(!account.contains_cache());
-    /// account.cache();
-    /// assert!(account.contains_cache());
-    /// ```
-    pub fn contains_cache(&self) -> bool {
-        let size = self.accounts.len();
-        if size > 0 && self.accounts[size - 1].name() == CACHE {
-            // if size > 0 is false it won't check the second part so there is no out of bounds error
-            return true;
-        }
-        false
-    }
-    /// Returns the `Cache` index in the `Vec` of child `Accounts`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::Account;
-    /// let mut account = Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     );
-    /// assert_eq!(account.cache_position(), None);
-    /// account.cache();
-    /// assert_eq!(account.cache_position(), Some(3));
-    /// ```
-    pub fn cache_position(&self) -> Option<usize> {
-        let size = self.accounts.len();
-        if size > 0 && self.accounts[size - 1].name() == CACHE {
-            // if size > 0 is false it won't check the second part so there is no out of bounds error
-            return Some(size - 1);
-        }
-        None
-    }
-    /// Creates or updates a `Cache` of the child `Accounts`.
-    ///
-    /// `true` will be returned if a `Cache` was created, otherwise the
-    /// `Cache` will be updated and false will be returned.
-    ///
-    /// # Panics
-    ///
-    /// This effectively pushes a new `Account` into the `Vec` so it
-    /// panics if the new capacity exceeds `isize::MAX` bytes.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new(
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// assert_eq!(account.cache(),true);
-    /// assert!(account ==
-    ///     Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", true, Default::default(), Default::default()),
-    ///             Account::new("2", true, Default::default(), Default::default()),
-    ///             Account::new("Cache", true, Default::default(), Default::default())
-    ///         ],
-    ///     )
-    /// )
-    /// ```
-    pub fn cache(&mut self) -> bool{
-        let r_value = !self.contains_cache();
-        if r_value {
-            self.accounts.push(Account::new(
-                CACHE,
-                true,
-                Default::default(),
-                Default::default(),
-            ));
-        }
-        let cache_position = self.cache_position().unwrap();
-        self.accounts[cache_position]
-            .settings.clear();
-        self.accounts[cache_position]
-            .settings
-            .reserve(self.settings.capacity()); //this assumes that Account.settings contains all settings and isn't empty
-        for setting in self.settings.keys() {
-            //this assumes that Account.settings contains all settings and isn't empty
-            for account in (0..cache_position).rev() {
-                if self.accounts[account].active() {
-                    if let Some(value) = self.accounts[account].get(setting) {
-                        let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
-                        self.accounts[cache_position].insert(setting, temp);
-                    } else {
-                        self.accounts[cache_position].insert(
-                            setting,
-                            self.settings.get(setting).unwrap().clone(), //safe unwrap because we got "setting" from .keys()
-                        );
-                    }
-                }
-            }
-        }
-        r_value
-    }
-    /// Deletes `Cache` if one exists.
-    ///
-    /// `true` will be returned if a `Cache` was deleted.
-    /// 
-    /// ´Cache` can be created with [`cache()`](Account::cache)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::Account;
-    /// let mut account = Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     );
-    /// assert_eq!(account.delete_cache(),false);
-    /// account.cache();
-    /// assert!(account.contains_cache());
-    /// assert_eq!(account.delete_cache(),true);
-    /// assert!(!account.contains_cache());
-    /// ```
-    pub fn delete_cache(&mut self) -> bool{
-        if self.contains_cache() {
-            self.accounts.pop();
-            return true
-        }
-        false
-    }
-    /// Returns the number of elements in the `Vec` of child `Accounts`,
-    /// without counting the `Cache`.
-    ///
-    /// This is equivalent to [`len()`](Account::len()) if `Cache` doesn't exist
-    /// or to [`len()`](Account::len()) -1 if it does.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::Account;
-    /// let mut account = Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     );
-    /// assert_eq!(account.len(), 3);
-    /// assert_eq!(account.len_without_cache(), 3);
-    /// account.cache();
-    /// assert_eq!(account.len(), 4);
-    /// assert_eq!(account.len_without_cache(), 3);
-    /// ```
-    pub fn len_without_cache(&self) -> usize {
-        if self.contains_cache() {
-            self.accounts.len() - 1
-        } else {
-            self.accounts.len()
-        }
-    }
     /// Inserts a key-value pair into the map of a child `Account`.
     /// 
+    /// This will updated the [settings](Account#settings) of all necessary Accounts 
+    /// so that the parent Account remains [valid](Account#valid)
+    ///
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
     ///
@@ -975,32 +728,30 @@ impl Account {
         } else {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        match account_to_find {
-            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Modify)),
-            n => {
-                if let Some(found_account) = self.mut_account_from_name(n) {
-                    match found_account.deep_insert(
-                        setting_name,
-                        setting_value.clone(),
-                        account_names,
-                    ) {
-                        //recursive call
-                        Ok(insert_option) => {
-                            found_account.insert(setting_name, setting_value); //after the base this will be called in all previous function calls,
-                                                                               //inserting the value in the corresponding Account.settings and caches
-                            Ok(insert_option) //returning the original value from the base case
-                        }
-                        Err(error) => match error {
-                            DeepChangeError::EmptyVec => {
-                                Ok(found_account.insert(setting_name, setting_value))
-                            } //base case
-                            _ => Err(error), //error, impossible/invalid function call
-                        },
-                    }
-                } else {
-                    Err(DeepChangeError::NotFound)
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_insert(
+                setting_name,
+                setting_value.clone(),
+                account_names,
+            ) {
+                //recursive call
+                Ok(insert_option) => {
+                    self.update_setting(setting_name);
+                    //after the base this will be called in all previous function calls,
+                    //updating the value in the corresponding Account.settings
+                    Ok(insert_option) //returning the original value from the base case
                 }
+                Err(error) => match error {
+                    DeepChangeError::EmptyVec => {
+                        Ok(found_account.insert(setting_name, setting_value))
+                    } //base case
+                    _ => Err(error), //error, impossible/invalid function call
+                },
             }
+        } else {
+            Err(DeepChangeError::NotFound)
+        }
+    }
     /// Updates a setting with the value its supposed to have.
     /// 
     /// 
@@ -1040,16 +791,14 @@ impl Account {
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
+    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    ///
+    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
+    ///
     /// Won't return an error if the child `Account` being pushed is [invalid](Account#valid)
     /// but will cause unintended behavior for future calls to the main `Account`.
     /// Use [push](Account::push) if the Account might be [invalid](Account#valid).
-    ///
-    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
-    ///
-    /// The `Cache` will always be at the end of the collection, so if the main `Account`
-    /// [contains_cache](Account::contains_cache) then the child `Account` will be inserted
-    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of child `Account` is false.
-    ///
+    /// 
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -1082,47 +831,12 @@ impl Account {
     /// )
     /// ```
     pub fn push_unchecked(&mut self, account: Account) {
-        //doesn't check if Account being pushed is valid
-        //if a invalid account is pushed it can cause unintended behavior when other functions are called
-        if let Some(cache_position) = self.cache_position() {
-            if account.active() {
-                self.accounts.insert(cache_position, account.clone());
-                for setting in account.settings.keys() {
-                    if !account.contains_key(setting) {
-                        self._insert(setting, account.get(setting).unwrap().clone());
-                        self.accounts[cache_position]
-                            ._insert(setting, account.get(setting).unwrap().clone());
-                    } else {
-                        self.update_cache_of_setting(setting);
-                    }
-                }
-            } else {
-                for setting in account.settings.keys() {
-                    if !account.contains_key(setting) {
-                        self._insert(setting, account.get(setting).unwrap().clone());
-                    }
-                }
-                self.accounts.insert(cache_position, account);
-            }
-        } else {
+        if account.active {
             for setting in account.settings.keys() {
-                if !account.contains_key(setting) {
-                    self._insert(setting, account.get(setting).unwrap().clone());
-                }
-            }
-            self.accounts.push(account);
+                self.insert(setting, account.get(setting).unwrap().clone());
+            }   
         }
-    }
-    fn update_cache_of_setting(&mut self, name: &str) {
-        //Cache and setting needs to exist, not pub fn so needs to be checked by developer instead of adding if statements making code slower
-        let size = self.len();
-        for account in (0..size - 1).rev() {
-            if let Some(value) = self.accounts[account].get(name) {
-                let temp = value.clone();
-                self.accounts[size - 1].insert(name, temp);
-                break;
-            }
-        }
+        self.accounts.push(account);
     }
     /// Returns `true` if the `Account` contains a value for the specified key.
     ///
@@ -1144,18 +858,12 @@ impl Account {
     }
     /// Returns a reference to the value corresponding to the key.
     ///
-    /// Internally [`get()`](Account::get()) is called on all child `Accounts` of the `Vec`
-    /// starting at the end, followed by calling [`get()`](HashMap::get()) on the main `Account` `settings`.
-    /// Will return `Some`([Box<dyn Setting>]) when found.
-    ///
-    /// If there is a significant number of child `Accounts` it is recommend to create a `Cache` with [`cache()`](Account::cache) to improve performance.
-    /// Then there will be only one call of [`get()`](HashMap::get()) to `Cache` to obtain the desired [Box<dyn Setting>].
-    ///
     /// The key may be any borrowed form of the map's key type, but
     /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
     /// the key type.
     ///
-    /// This method ends on a call to a [`HashMap`]'s [`get()`](HashMap::get()).
+    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
+    ///
     /// # Examples
     ///
     /// ```
@@ -1167,17 +875,7 @@ impl Account {
     /// ```
     #[allow(clippy::borrowed_box)]
     pub fn get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
-        if let Some(position) = self.cache_position() {
-            return self.accounts[position].get(setting_name);
-        }
-        for account in (0..self.len()).rev() {
-            if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].get(setting_name) {
-                    return Some(value);
-                }
-            }
-        }
-        return self._get(setting_name);
+        self.settings.get(setting_name)
     }
     /// Inserts a key-value pair into the map.
     ///
@@ -1210,11 +908,8 @@ impl Account {
         setting_value: Box<dyn Setting>,
     ) -> Option<Box<dyn Setting>> {
         let mut return_value = None;
-        if let Some(value) = self._insert(setting_name, setting_value.clone()) {
+        if let Some(value) = self.settings.insert(setting_name.to_string(), setting_value.clone()) {
             return_value = Some(value);
-        }
-        if self.contains_cache() {
-            self.update_cache_of_setting(setting_name);
         }
         return_value
     }
@@ -1312,15 +1007,13 @@ impl Account {
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
-    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
-    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
-    ///
     /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
-    /// The `Cache` will always be at the end of the collection, so if the main `Account`
-    /// [contains_cache](Account::contains_cache) then the child `Account` will be inserted
-    /// before the `Cache`. The `Cache ` will be updated with the new settings unless [active](Account::active) of child `Account` is false.
-    ///
+    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
+    /// 
+    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
+    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
+    /// 
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -1355,10 +1048,6 @@ impl Account {
     ///     == Some(InvalidAccountError::ExistingName));
     /// ```
     pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
-        if account.name() == CACHE {
-            //check if account isn't named Cache
-            return Some(InvalidAccountError::Cache(CacheError::Creating));
-        }
         if self.accounts_names().contains(&account.name()) {
             //check if account has the same name as a sibling account
             return Some(InvalidAccountError::ExistingName);
@@ -1367,43 +1056,59 @@ impl Account {
             //check if Account is internally valid
             return Some(error);
         }
-        if let Some(cache_position) = self.cache_position() {
-            if account.active() {
-                self.accounts.insert(cache_position, account.clone());
-                for setting in account.settings.keys() {
-                    if !account.contains_key(setting) {
-                        self._insert(setting, account.get(setting).unwrap().clone());
-                        self.accounts[cache_position]
-                            ._insert(setting, account.get(setting).unwrap().clone());
-                    } else {
-                        self.update_cache_of_setting(setting);
-                    }
-                }
-            } else {
-                for setting in account.settings.keys() {
-                    if !account.contains_key(setting) {
-                        self._insert(setting, account.get(setting).unwrap().clone());
-                    }
-                }
-                self.accounts.insert(cache_position, account);
-            }
-        } else {
+        if account.active {
             for setting in account.settings.keys() {
-                if !account.contains_key(setting) {
-                    self._insert(setting, account.get(setting).unwrap().clone());
-                }
-            }
-            self.accounts.push(account);
+                self.insert(setting, account.get(setting).unwrap().clone());
+            }   
         }
+        self.accounts.push(account);
         None
     }
     /// Removes the last element from a vector and returns it, or [`None`] if it is empty.
-    ///
-    /// Will not pop `Cache` if there is one, but will pop the next child `Account`. `Cache` values will be updated.
-    ///
+    /// 
     /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from 
     /// the main `Account` present only on the popped child `Account`.
     ///
+    /// This method is a direct call to [`Vec`]'s [`pop()`](Vec::pop()).
+    /// 
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Account::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///         Account::new("3", Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.pop_keep();
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// )
+    /// ```
+    pub fn pop_keep(&mut self) -> std::option::Option<Account> {
+        self.accounts.pop()
+    }
+    /// Removes the last element from a vector and returns it, or [`None`] if it empty.
+    ///
+    /// Will remove settings from the parent `Account` present only on the popped child `Account`.
+    /// Use [pop_keep](Account::pop) if you want the parent `Account` settings to remain unchanged.
+    ///
+    /// 
+    /// This method contains a call to [`Vec`]'s [`pop()`](Vec::pop()).
+    /// 
     /// # Examples
     ///
     /// ```
@@ -1432,72 +1137,7 @@ impl Account {
     /// )
     /// ```
     pub fn pop(&mut self) -> std::option::Option<Account> {
-        if let Some(position) = self.cache_position() {
-            if position == 0 {
-                return None;
-            }
-            let popped_account = self.accounts.remove(position - 1);
-            if popped_account.active() {
-                for setting in popped_account.keys() {
-                    self.update_cache_of_setting(setting)
-                }
-            }
-            Some(popped_account)
-        } else {
-            self.accounts.pop()
-        }
-    }
-    /// Removes the last element from a vector and returns it, or [`None`] if it empty.
-    ///
-    /// Will not pop `Cache` if there is one, but will pop the next child `Account`. `Cache` values will be updated.
-    ///
-    /// Will remove settings from the main `Account` present only on the popped child `Account`.
-    /// Use [pop](Account::pop) if you want the main `Account` settings to remain unchanged.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new(
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("3", Default::default(), Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// account.pop_remove();
-    /// assert!(account ==
-    ///     Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     )
-    /// )
-    /// ```
-    pub fn pop_remove(&mut self) -> std::option::Option<Account> {
-        let popped_account = if let Some(position) = self.cache_position() {
-            if position == 0 {
-                return None;
-            }
-            let popped_account = self.accounts.remove(position - 1);
-            if popped_account.active() {
-                for setting in popped_account.keys() {
-                    self.update_cache_of_setting(setting)
-                }
-            }
-            popped_account
-        } else if let Some(popped_account) = self.accounts.pop() {
-            popped_account
-        } else {
-            return None;
-        };
+        let popped_account = self.accounts.pop()?;
         for setting in popped_account.keys() {
             if !self.vec_contains_key(setting) {
                 self.settings.remove(setting);
@@ -1508,7 +1148,7 @@ impl Account {
     fn vec_contains_key(&self, setting: &str) -> bool {
         for account in self.accounts() {
             if account.contains_key(setting) {
-                return true;
+                return true
             }
         }
         false
@@ -1516,60 +1156,6 @@ impl Account {
     ///todo!()
     pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Account> {
         self.accounts.get_mut(index)
-    }
-    /// Returns a reference to the value corresponding to the key.
-    ///
-    /// The key may be any borrowed form of the map's key type, but
-    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
-    /// the key type.
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
-    /// account.insert("a small number", 42.stg());
-    /// assert_eq!(account.get("a small number"), Some(&42.stg()));
-    /// assert_eq!(account.get("a big number"), None);
-    /// ```
-    #[allow(clippy::borrowed_box)]
-    fn _get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
-        self.settings.get(setting_name)
-    }
-    /// Inserts a key-value pair into the map.
-    ///
-    /// If the map did not have this key present, None is returned.
-    ///
-    /// If the map did have this key present, the value is updated, and the old
-    /// value is returned. The key is not updated, though; this matters for
-    /// types that can be `==` without being identical. See the [module-level
-    /// documentation] for more.
-    ///
-    /// [module-level documentation]: std::collections#insert-and-complex-keys
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
-    /// assert_eq!(account.insert("a small number", 1.stg()), None);
-    /// assert_eq!(account.settings().is_empty(), false);
-    ///
-    /// account.insert("a small number", 2.stg());
-    /// assert_eq!(account.insert("a small number", 3.stg()), Some(2.stg()));
-    /// assert!(account.settings()[&"a small number".to_string()] == 3.stg());
-    /// ```
-    fn _insert(
-        &mut self,
-        setting_name: &str,
-        setting_value: Box<dyn Setting>,
-    ) -> Option<Box<dyn Setting>> {
-        self.settings
-            .insert(setting_name.to_string(), setting_value)
     }
     /*
         unused functions
@@ -1691,11 +1277,11 @@ mod tests {
         let bool_setting = true;
         let i32_setting = 42;
         let mut account = Account::default();
-        account._insert("bool_setting", Box::new(bool_setting));
-        account._insert("i32_setting", i32_setting.stg());
-        let i32s: i32 = unstg(account._get("i32_setting").unwrap().clone());
+        account.insert("bool_setting", Box::new(bool_setting));
+        account.insert("i32_setting", i32_setting.stg());
+        let i32s: i32 = unstg(account.get("i32_setting").unwrap().clone());
         assert_eq!(i32s, 42);
-        let stg: Box<dyn Setting> = account._get("bool_setting").unwrap().clone();
+        let stg: Box<dyn Setting> = account.get("bool_setting").unwrap().clone();
         assert!(unstg::<bool>(stg));
     }
     #[test]
@@ -1710,8 +1296,8 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        account1._insert("answer to everything", 42.stg());
-        account1._insert("true is true", true.stg());
+        account1.insert("answer to everything", 42.stg());
+        account1.insert("true is true", true.stg());
         let account2 = Account::new(
             "name",
             Default::default(),
