@@ -402,12 +402,48 @@ impl Account {
             self.accounts.len()
         }
     }
+    /// Inserts a key-value pair into the map of a child `Account`.
+    /// 
+    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new(
+    ///                 "3_2", 
+    ///                 true, 
+    ///                 HashMap::from([
+    ///                     ("int".to_string(),42.stg()),
+    ///                     ("bool".to_string(),true.stg()),
+    ///                     ("char".to_string(),'c'.stg()),
+    ///                 ]), 
+    ///                 Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    /// 
+    /// assert_eq!(account.deep_insert("int", 777.stg() ,&mut vec!["3_2","3"]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&777.stg())));
+    /// ```
     pub fn deep_insert(
         &mut self,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-        //left is where we insert the value, right is the first child of the Account we call
         setting_name: &str,
         setting_value: Box<dyn Setting>,
+        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
+        //left is where we insert the value, right is the first child of the Account we call
     ) -> Result<Option<Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
@@ -415,13 +451,13 @@ impl Account {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
         match account_to_find {
-            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Inserting)),
+            n if n == CACHE => Err(DeepChangeError::Cache(CacheError::Modify)),
             n => {
-                if let Some(found_account) = self.get_mut_from_name(n) {
+                if let Some(found_account) = self.mut_account_from_name(n) {
                     match found_account.deep_insert(
-                        account_names,
                         setting_name,
                         setting_value.clone(),
+                        account_names,
                     ) {
                         //recursive call
                         Ok(insert_option) => {
