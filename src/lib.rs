@@ -24,7 +24,6 @@ use types::{constants::*, errors::*};
 
 /// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
 /// 
-/// todo!() description
 /// An Account is a Wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
 /// 
 /// An Account can also hold other [Accounts](Account#accounts). This allows for complex systems where 
@@ -1286,9 +1285,8 @@ impl Account {
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
-    /// Will return an error if the child `Account` being pushed is invalid or would make the main `Account` invalid.
+    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
     /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
-    /// //todo!() put a link to what means for an Account to be valid/invalid
     ///
     /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
