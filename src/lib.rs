@@ -390,10 +390,38 @@ impl Account {
             }
         }
     }
-    pub fn delete_cache(&mut self) {
+    /// Deletes `Cache` if one exists.
+    ///
+    /// `true` will be returned if a `Cache` was deleted.
+    /// 
+    /// ´Cache` can be created with [`cache()`](Account::cache)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let mut account = Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     );
+    /// assert_eq!(account.delete_cache(),false);
+    /// account.cache();
+    /// assert!(account.contains_cache());
+    /// assert_eq!(account.delete_cache(),true);
+    /// assert!(!account.contains_cache());
+    /// ```
+    pub fn delete_cache(&mut self) -> bool{
         if self.contains_cache() {
             self.accounts.pop();
+            return true
         }
+        false
     }
     /// Returns the number of elements in the `Vec` of child `Accounts`,
     /// without counting the `Cache`.
