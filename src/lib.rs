@@ -23,141 +23,141 @@ pub mod types;
 use types::errors::*;
 
 /// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
-/// 
+///
 /// An Account is a Wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
-/// 
-/// An Account can also hold other [Accounts](Account#accounts). This allows for complex systems where 
+///
+/// An Account can also hold other [Accounts](Account#accounts). This allows for complex systems where
 /// an app can have multiple layers of settings. The top most layer being the first one to be searched
 /// for a specific setting, and in the case it isn't found the next layer will be search, this will be
 /// done until the setting is found on the last layer that would be the default layer containing all the settings.
-/// 
-/// 
-/// 
+///
+///
+///
 /// An `Account` contains the following fields:
-/// 
+///
 ///  - [name](Account#name): [`String`],
-/// 
+///
 ///  - [active](Account#active): [`bool`],
-/// 
+///
 ///  - [settings](Account#settings): [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>>,
-/// 
+///
 ///  - [accounts](Account#accounts): [`Vec`]<`Account`>,
 ///
-/// 
+///
 /// # New Account
 ///
 /// Currently a new Account can be created with:
 ///  - [new](Account::new): Create a new Account.
-/// 
+///
 ///  - [new_valid](Account::new_valid): Create a new Account that is guaranteed to be [valid](Account#valid).
-/// 
+///
 ///  - [clone][Clone::clone]: Clone an existing Account.
-/// 
+///
 /// An `AccountBuilder` is planned to be created in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20).
-/// 
-/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but child 
+///
+/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but child
 /// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
-/// 
-/// 
+///
+///
 /// # [Name](Account#name)
-/// 
-/// 
-/// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`. 
+///
+///
+/// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`.
 /// For this reason child `Accounts` need to be uniquely named to be [valid](Account#valid).
-/// 
-///  - [name](Account::name): Get an account's name 
-/// 
+///
+///  - [name](Account::name): Get an account's name
+///
 ///  - [rename](Account::rename): Rename an `Account`
-/// 
+///
 ///  - [deep_rename](Account::deep_rename): Rename a [child](Account#accounts)  `Accounts`
-/// 
-/// 
+///
+///
 /// # [Active](Account#active)
-/// 
-/// 
-/// If a child `Account` is inactive it will be ignore by certain methods like [get()](Account::get) 
+///
+///
+/// If a child `Account` is inactive it will be ignore by certain methods like [get()](Account::get)
 /// when this are called on the parent `Account`.
-/// 
+///
 ///  - [active](Account::active): Get an account's activity state
-/// 
-///  - [change_activity](Account::change_activity): Change the activity 
-/// 
-///  - [deep_change_activity](Account::deep_change_activity): Change the activity of one of the child `Accounts` 
-/// 
-/// 
+///
+///  - [change_activity](Account::change_activity): Change the activity
+///
+///  - [deep_change_activity](Account::deep_change_activity): Change the activity of one of the child `Accounts`
+///
+///
 /// # [Settings](Account#settings)
-/// 
-/// 
+///
+///
 /// A `HashMap` holding [Settings](Setting). Contains all the settings present in the
 /// [child](Account#accounts) Accounts but can contain settings that aren't in them.
-/// 
-///  - [accounts()](Account::accounts) Get an account's child `Accounts` 
-/// 
+///
+///  - [accounts()](Account::accounts) Get an account's child `Accounts`
+///
 ///  - [get](Account::get): Returns a reference to the value corresponding to the key
-/// 
+///
 ///  - [deep_get](Account::deep_get): Returns a reference to the value corresponding to the key on a child Account
-/// 
+///
 ///  - [insert](Account::insert): Inserts a key-value pair into the map.
-/// 
+///
 ///  - [deep_insert](Account::deep_insert):Inserts a key-value pair into the map of a child Account
-/// 
-///  - [keys](Account::keys): An iterator visiting all keys in arbitrary order 
-/// 
+///
+///  - [keys](Account::keys): An iterator visiting all keys in arbitrary order
+///
 ///  - [contains_key](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
-/// 
+///
 ///  - [capacity](Account::capacity): Returns the number of elements the map can hold without reallocating.
-/// 
-/// 
+///
+///
 /// # [Accounts](Account#accounts)
-/// 
-/// 
+///
+///
 /// A `Vec` of Accounts. The Account that holds the `Vec` is the parent Account and the Accounts that are being held
 /// are the child Accounts.
-/// 
+///
 ///  - [accounts()](Account::accounts): Get an Account's child `Accounts`
-/// 
+///
 ///  - [len](Account::len): Returns the number of elements in the `Vec`.
-/// 
+///
 ///  - [is_empty](Account::is_empty): Returns `true` if the `Vec` contains no elements.
-/// 
+///
 ///  - [push](Account::push): Appends an `Account` to the back of the `Vec`.
-/// 
+///
 ///  - [pop](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
-/// 
+///
 ///  - [pop_remove](Account::pop_remove): [pop](Account::pop) but also removes the settings from the main account. Cache
-/// 
-/// 
+///
+///
 /// # [Valid](Account#valid)
 ///  
-/// A valid `Account` is one where it's methods will always behave as intended. 
-/// 
-/// There are certain methods that may make an Account invalid if improperly used, 
+/// A valid `Account` is one where it's methods will always behave as intended.
+///
+/// There are certain methods that may make an Account invalid if improperly used,
 /// and that would make other methods have unindent effects.
-/// 
+///
 /// If a method can make an `Account` invalid it will be mentioned.
-/// 
+///
 /// ## Validity Defined:
 /// For an `Account` to be valid it needs to follow the following requirements:
-/// 
+///
 ///  - It's child `Accounts` are valid.
-/// 
+///
 ///  - It's child `Accounts` have unique names.
-/// 
+///
 /// It's NOT yet implemented but it's intended that the following are also true:
-/// 
+///
 ///  - The `Account` contains all settings in the child `Accounts`.
-/// 
-/// 
+///
+///
 /// # [Deep Functions](Account#deep-functions)
 ///
-/// 
-/// Deep Functions are versions of functions to interact with a child `Account` 
+///
+/// Deep Functions are versions of functions to interact with a child `Account`
 /// of the parent `Account` that the function is called.
 ///
-/// They accept an extra `Vec` of `&str` that are the list of child `Accounts` 
+/// They accept an extra `Vec` of `&str` that are the list of child `Accounts`
 /// you have to pass though to get to the child `Account` the function will be called.
 ///
-/// 
+///
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Account {
     name: String,
@@ -173,7 +173,7 @@ impl Account {
     ///
     /// It's recommend that the parent `Accounts` are made with [`new_valid`](Account::new_valid)
     /// but child `Accounts` are made with with `new` to avoid repeated validity checks.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use std::collections::HashMap;
@@ -227,7 +227,7 @@ impl Account {
     /// This lets you create an `Account` that is sure to be fully valid
     /// including it's child `Accounts` or an error is returned.
     ///
-    /// It's recommend that parent `Accounts` are made with `new_valid` but child 
+    /// It's recommend that parent `Accounts` are made with `new_valid` but child
     /// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
     ///
     /// # Examples
@@ -428,7 +428,7 @@ impl Account {
         }
     }
     /// Takes a `bool` and changes the value of active of a child `Account`.
-    /// 
+    ///
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`change_activity`](Account::change_activity) in this case.
     ///
@@ -450,7 +450,7 @@ impl Account {
     ///         ])
     ///     ],
     /// );
-    /// 
+    ///
     /// assert_eq!(account.deep_change_activity(false,&mut vec!["3_2","3"]), Ok(true));
     /// assert_eq!(account, Account::new(
     ///     "Old Name",
@@ -471,8 +471,8 @@ impl Account {
         &mut self,
         new_active: bool,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-        //left is the account we rename, right is the first child of the Account we call
-    ) ->Result<bool,DeepChangeError> {
+                                       //left is the account we rename, right is the first child of the Account we call
+    ) -> Result<bool, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
@@ -482,9 +482,7 @@ impl Account {
             match found_account.deep_change_activity(new_active, account_names) {
                 //recursive call
                 Err(error) => match error {
-                    DeepChangeError::EmptyVec => {
-                        Ok(found_account.change_activity(new_active))
-                    } //base case
+                    DeepChangeError::EmptyVec => Ok(found_account.change_activity(new_active)), //base case
                     _ => Err(error), //error, impossible/invalid function call
                 },
                 Ok(value) => Ok(value),
@@ -496,7 +494,7 @@ impl Account {
     /// Takes a `&str` and updates the name of the `Account`.
     ///
     /// Returns the previous name that the Account had.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -515,16 +513,15 @@ impl Account {
         let r_value = self.name.clone();
         self.name = new_name.to_string();
         r_value
-        
     }
     /// Takes a `&str` and updates the name of a child `Account`.
-    /// 
+    ///
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
     ///
-    /// This can make a Account [invalid](Account#valid) if the child Account 
+    /// This can make a Account [invalid](Account#valid) if the child Account
     /// got renamed to the same name as one of it's siblings.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -543,7 +540,7 @@ impl Account {
     ///         ])
     ///     ],
     /// );
-    /// 
+    ///
     /// assert_eq!(account.deep_rename("Cool Name",&mut vec!["3_2","3"]), Ok("3_2".to_string()));
     /// assert_eq!(account, Account::new(
     ///     "Old Name",
@@ -564,8 +561,8 @@ impl Account {
         &mut self,
         new_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-        //left is the account we rename, right is the first child of the Account we call
-    ) ->Result<String,DeepChangeError> {
+                                       //left is the account we rename, right is the first child of the Account we call
+    ) -> Result<String, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
         } else {
@@ -575,9 +572,7 @@ impl Account {
             match found_account.deep_rename(new_name, account_names) {
                 //recursive call
                 Err(error) => match error {
-                    DeepChangeError::EmptyVec => {
-                        Ok(found_account.rename(new_name))
-                    } //base case
+                    DeepChangeError::EmptyVec => Ok(found_account.rename(new_name)), //base case
                     _ => Err(error), //error, impossible/invalid function call
                 },
                 Ok(value) => Ok(value),
@@ -587,7 +582,7 @@ impl Account {
         }
     }
     /// Returns a reference to the value corresponding to the key in a child `Account`.
-    /// 
+    ///
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`get`](Account::get) in this case.
     ///
@@ -606,19 +601,19 @@ impl Account {
     ///         Account::new("3", true, Default::default(), vec![
     ///             Account::new("3_1", true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2", 
-    ///                 true, 
+    ///                 "3_2",
+    ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
     ///                     ("bool".to_string(),true.stg()),
     ///                     ("char".to_string(),'c'.stg()),
-    ///                 ]), 
+    ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3", true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
-    /// 
+    ///
     /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&42.stg())));
     /// ```
     #[allow(clippy::borrowed_box)]
@@ -626,7 +621,7 @@ impl Account {
         &self,
         setting_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-        //left is the account we rename, right is the first child of the Account we call
+                                       //left is the account we rename, right is the first child of the Account we call
     ) -> Result<Option<&Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
@@ -678,8 +673,8 @@ impl Account {
         self.accounts.iter().map(|a| a.name()).collect()
     }
     /// Inserts a key-value pair into the map of a child `Account`.
-    /// 
-    /// This will updated the [settings](Account#settings) of all necessary Accounts 
+    ///
+    /// This will updated the [settings](Account#settings) of all necessary Accounts
     /// so that the parent Account remains [valid](Account#valid)
     ///
     /// Part of the deep_functions group that accept a `Vec` of &str to identify
@@ -700,19 +695,19 @@ impl Account {
     ///         Account::new("3", true, Default::default(), vec![
     ///             Account::new("3_1", true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2", 
-    ///                 true, 
+    ///                 "3_2",
+    ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
     ///                     ("bool".to_string(),true.stg()),
     ///                     ("char".to_string(),'c'.stg()),
-    ///                 ]), 
+    ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3", true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
-    /// 
+    ///
     /// assert_eq!(account.deep_insert("int", 777.stg() ,&mut vec!["3_2","3"]), Ok(Some(42.stg())));
     /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&777.stg())));
     /// ```
@@ -721,7 +716,7 @@ impl Account {
         setting_name: &str,
         setting_value: Box<dyn Setting>,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-        //left is where we insert the value, right is the first child of the Account we call
+                                       //left is where we insert the value, right is the first child of the Account we call
     ) -> Result<Option<Box<dyn Setting>>, DeepChangeError> {
         let account_to_find = if let Some(account_name) = account_names.pop() {
             account_name
@@ -729,11 +724,7 @@ impl Account {
             return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
         if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_insert(
-                setting_name,
-                setting_value.clone(),
-                account_names,
-            ) {
+            match found_account.deep_insert(setting_name, setting_value.clone(), account_names) {
                 //recursive call
                 Ok(insert_option) => {
                     self.update_setting(setting_name);
@@ -753,15 +744,15 @@ impl Account {
         }
     }
     /// Updates a setting with the value its supposed to have.
-    /// 
-    /// 
-    /// 
+    ///
+    ///
+    ///
     /// Returns `None` if the setting isn't present in the Account or child Accounts.
     /// Returns true if the value of the setting was updated.
-    /// 
-    /// If an Account is [valid](Account#valid) this method never returns Some(true) 
+    ///
+    /// If an Account is [valid](Account#valid) this method never returns Some(true)
     /// as this method is used to turn an invalid Account into a valid one.
-    /// 
+    ///
     /// # Examples
     /// ```
     ///  //todo!() add example
@@ -771,8 +762,8 @@ impl Account {
             if self.accounts[account].active() {
                 if let Some(value) = self.accounts[account].get(setting) {
                     let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
-                    return Some(!(self.insert(setting, temp.clone()) == Some(temp)))
-                }//todo!()improve this so cloning twice isn't necessary
+                    return Some(!(self.insert(setting, temp.clone()) == Some(temp)));
+                } //todo!()improve this so cloning twice isn't necessary
             }
         }
         if self.settings.contains_key(setting) {
@@ -798,7 +789,7 @@ impl Account {
     /// Won't return an error if the child `Account` being pushed is [invalid](Account#valid)
     /// but will cause unintended behavior for future calls to the main `Account`.
     /// Use [push](Account::push) if the Account might be [invalid](Account#valid).
-    /// 
+    ///
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -834,7 +825,7 @@ impl Account {
         if account.active {
             for setting in account.settings.keys() {
                 self.insert(setting, account.get(setting).unwrap().clone());
-            }   
+            }
         }
         self.accounts.push(account);
     }
@@ -908,7 +899,10 @@ impl Account {
         setting_value: Box<dyn Setting>,
     ) -> Option<Box<dyn Setting>> {
         let mut return_value = None;
-        if let Some(value) = self.settings.insert(setting_name.to_string(), setting_value.clone()) {
+        if let Some(value) = self
+            .settings
+            .insert(setting_name.to_string(), setting_value.clone())
+        {
             return_value = Some(value);
         }
         return_value
@@ -1010,10 +1004,10 @@ impl Account {
     /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
     /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
-    /// 
+    ///
     /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
     /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
-    /// 
+    ///
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -1059,18 +1053,18 @@ impl Account {
         if account.active {
             for setting in account.settings.keys() {
                 self.insert(setting, account.get(setting).unwrap().clone());
-            }   
+            }
         }
         self.accounts.push(account);
         None
     }
     /// Removes the last element from a vector and returns it, or [`None`] if it is empty.
-    /// 
-    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from 
+    ///
+    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from
     /// the main `Account` present only on the popped child `Account`.
     ///
     /// This method is a direct call to [`Vec`]'s [`pop()`](Vec::pop()).
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -1106,9 +1100,9 @@ impl Account {
     /// Will remove settings from the parent `Account` present only on the popped child `Account`.
     /// Use [pop_keep](Account::pop) if you want the parent `Account` settings to remain unchanged.
     ///
-    /// 
+    ///
     /// This method contains a call to [`Vec`]'s [`pop()`](Vec::pop()).
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -1148,7 +1142,7 @@ impl Account {
     fn vec_contains_key(&self, setting: &str) -> bool {
         for account in self.accounts() {
             if account.contains_key(setting) {
-                return true
+                return true;
             }
         }
         false
@@ -1198,7 +1192,7 @@ pub trait Setting: Any + Debug + DynClone + DynEq {
     /// ```
     fn stg(self) -> Box<dyn Setting>
     where
-        Self: Setting + Sized
+        Self: Setting + Sized,
     {
         Box::new(self)
     }
