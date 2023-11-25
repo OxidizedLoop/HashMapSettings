@@ -592,6 +592,31 @@ impl Account {
         }
         return self._get(setting_name);
     }
+    /// Inserts a key-value pair into the map.
+    ///
+    /// If the map did not have this key present, None is returned.
+    ///
+    /// If the map did have this key present, the value is updated, and the old
+    /// value is returned. The key is not updated, though; this matters for
+    /// types that can be `==` without being identical. See the [module-level
+    /// documentation] for more.
+    ///
+    /// [module-level documentation]: std::collections#insert-and-complex-keys
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account : Account = Default::default();
+    /// assert_eq!(account.insert("a small number", 1.stg()), None);
+    /// assert_eq!(account.settings().is_empty(), false);
+    ///
+    /// account.insert("a small number", 2.stg());
+    /// assert_eq!(account.insert("a small number", 3.stg()), Some(2.stg()));
+    /// assert!(account.settings()[&"a small number".to_string()] == 3.stg());
+    /// ```
     pub fn insert(
         &mut self,
         setting_name: &str,
