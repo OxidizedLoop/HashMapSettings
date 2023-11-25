@@ -395,6 +395,32 @@ impl Account {
             self.accounts.pop();
         }
     }
+    /// Returns the number of elements in the `Vec` of child `Accounts`,
+    /// without counting the `Cache`.
+    ///
+    /// This is equivalent to [`len()`](Account::len()) if `Cache` doesn't exist
+    /// or to [`len()`](Account::len()) -1 if it does.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::Account;
+    /// let mut account = Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
+    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     );
+    /// assert_eq!(account.len(), 3);
+    /// assert_eq!(account.len_without_cache(), 3);
+    /// account.cache();
+    /// assert_eq!(account.len(), 4);
+    /// assert_eq!(account.len_without_cache(), 3);
+    /// ```
     pub fn len_without_cache(&self) -> usize {
         if self.contains_cache() {
             self.accounts.len() - 1
