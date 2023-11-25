@@ -801,12 +801,11 @@ impl Account {
             self.accounts.pop()
         }
     }
-    /// Removes the last element from a vector and returns it, or [`None`] if it
-    /// is empty.
+    /// Removes the last element from a vector and returns it, or [`None`] if it empty.
     ///
-    /// Will not pop `Cache` if there is one, but will pop the next sub `Account`. `Cache` values will be updated.
+    /// Will not pop `Cache` if there is one, but will pop the next child `Account`. `Cache` values will be updated.
     ///
-    /// Will remove settings from the main `Account` present only on the popped sub `Account`.
+    /// Will remove settings from the main `Account` present only on the popped child `Account`.
     /// Use [pop](Account::pop) if you want the main `Account` settings to remain unchanged.
     ///
     /// # Examples
