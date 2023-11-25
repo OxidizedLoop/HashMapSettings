@@ -557,11 +557,11 @@ impl Account {
     }
     /// Returns a reference to the value corresponding to the key.
     ///
-    /// Internally [`get()`](Account::get()) is called on all sub `Accounts` of the `Vec`
+    /// Internally [`get()`](Account::get()) is called on all child `Accounts` of the `Vec`
     /// starting at the end, followed by calling [`get()`](HashMap::get()) on the main `Account` `settings`.
     /// Will return `Some`([Box<dyn Setting>]) when found.
     ///
-    /// If there is a significant number of sub accounts it is recommend to create a `Cache` with [`cache()`](Account::cache) to improve performance.
+    /// If there is a significant number of child `Accounts` it is recommend to create a `Cache` with [`cache()`](Account::cache) to improve performance.
     /// Then there will be only one call of [`get()`](HashMap::get()) to `Cache` to obtain the desired [Box<dyn Setting>].
     ///
     /// The key may be any borrowed form of the map's key type, but
