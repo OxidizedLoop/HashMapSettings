@@ -1,4 +1,4 @@
-use crate::*;
+use crate::Setting;
 /*
 currently the types being added are the types that derive serde Deserialize per version 1.0.192
 https://docs.rs/serde/latest/serde/de/trait.Deserialize.html#
@@ -332,12 +332,12 @@ mod tests {
         let stg_fun: Box<dyn Setting> = stg(bool);
         let stg_dot: Box<dyn Setting> = bool.stg();
         assert!(stg_fun == stg_dot.clone());
-        let stg_fu1 = stg_fun.clone();
-        let stg_do1 = stg_fun.clone();
+        let stg_fun_1 = stg_fun.clone();
+        let stg_dot_1 = stg_fun.clone();
         let bool_dot_unstg: bool = unstg(stg_fun);
         let bool_dot_safe_unstg: bool = *safe_unstg(stg_dot).unwrap();
-        let bool_fun_unstg: bool = unstg(stg_fu1);
-        let bool_fun_safe_unstg: bool = *safe_unstg(stg_do1).unwrap();
+        let bool_fun_unstg: bool = unstg(stg_fun_1);
+        let bool_fun_safe_unstg: bool = *safe_unstg(stg_dot_1).unwrap();
         assert!(bool_dot_unstg == bool);
         assert!(bool_fun_unstg == bool);
         assert!(bool_dot_unstg == bool_dot_safe_unstg);
