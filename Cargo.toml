@@ -7,6 +7,8 @@ description = "HashMap wrapper for layered Settings"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/OxidizedLoop/HashMapSettings"
 documentation = "https://docs.rs/hashmap_settings"
+keywords = ["hashmap", "settings", "account"]
+categories = ["config", "data-structures"]
 
 [dependencies]
 serde = {version ="1.0", features = ["derive"]}
