@@ -6,8 +6,22 @@
 //!  ```
 //! # // todo!() add examples
 //! ```
+// clippy lints
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
+#![warn(clippy::nursery)]
+#![warn(clippy::perf)]
+// should to be individually added #![warn(clippy::restriction)] 
+#![warn(clippy::style)]
+#![warn(clippy::suspicious)]
+//rustc lints
 #![warn(missing_docs)]
+//test warnings
 #![doc(test(attr(deny(warnings))))]
+//unstable features
 #![feature(trait_upcasting)]
 use core::fmt::Debug;
 use dyn_clone::DynClone;
