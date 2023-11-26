@@ -1,8 +1,11 @@
-//! HashMap wrapper for layered Settings
+//! `HashMap` wrapper for layered Settings
 //!
-//! This crate allows you to store and access all your program settings by calling a single Account struct regardless of the type that those settings implement.
+//! This crate allows you to store and access all your program settings by calling a single Account
+//! struct regardless of the type that those settings implement.
 //!
-//! This crate gives the tools necessary for a developer to create layered settings. This allows users of the application to not only have different settings for different environments, but also have groups of settings that they can easily swap.
+//! This crate gives the tools necessary for a developer to create layered settings.
+//! This allows users of the application to not only have different settings for different environments,
+//! but also have groups of settings that they can easily swap.
 //!  ```
 //! # // todo!() add examples
 //! ```
@@ -14,7 +17,7 @@
 #![allow(clippy::doc_markdown)]
 #![warn(clippy::nursery)]
 #![warn(clippy::perf)]
-// should to be individually added #![warn(clippy::restriction)] 
+// should to be individually added #![warn(clippy::restriction)]
 #![warn(clippy::style)]
 #![warn(clippy::suspicious)]
 //rustc lints
@@ -34,7 +37,7 @@ use std::{
 };
 /// module containing types used internally by the crate
 pub mod types;
-use types::errors::*;
+use types::errors::{DeepError, InvalidAccountError};
 
 /// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
 ///
@@ -61,16 +64,16 @@ use types::errors::*;
 /// # New Account
 ///
 /// Currently a new Account can be created with:
-///  - [new](Account::new): Create a new Account.
+///  - [`new`](Account::new): Create a new Account.
 ///
-///  - [new_valid](Account::new_valid): Create a new Account that is guaranteed to be [valid](Account#valid).
+///  - [`new_valid`](Account::new_valid): Create a new Account that is guaranteed to be [valid](Account#valid).
 ///
-///  - [clone][Clone::clone]: Clone an existing Account.
+///  - [`clone`][Clone::clone]: Clone an existing Account.
 ///
 /// An `AccountBuilder` is planned to be created in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20).
 ///
-/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but child
-/// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
+/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but
+/// [child Accounts](Accounts#accounts) are made with with [new](Account::new) to avoid repeated validity checks.
 ///
 ///
 /// # [Name](Account#name)
@@ -79,11 +82,11 @@ use types::errors::*;
 /// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`.
 /// For this reason child `Accounts` need to be uniquely named to be [valid](Account#valid).
 ///
-///  - [name](Account::name): Get an account's name
+///  - [`name`](Account::name): Get an account's name
 ///
-///  - [rename](Account::rename): Rename an `Account`
+///  - [`rename`](Account::rename): Rename an `Account`
 ///
-///  - [deep_rename](Account::deep_rename): Rename a [child](Account#accounts)  `Accounts`
+///  - [`deep_rename`](Account::deep_rename): Rename a [child](Account#accounts)  `Accounts`
 ///
 ///
 /// # [Active](Account#active)
@@ -92,11 +95,11 @@ use types::errors::*;
 /// If a child `Account` is inactive it will be ignore by certain methods like [get()](Account::get)
 /// when this are called on the parent `Account`.
 ///
-///  - [active](Account::active): Get an account's activity state
+///  - [`active`](Account::active): Get an account's activity state
 ///
-///  - [change_activity](Account::change_activity): Change the activity
+///  - [`change_activity`](Account::change_activity): Change the activity
 ///
-///  - [deep_change_activity](Account::deep_change_activity): Change the activity of one of the child `Accounts`
+///  - [`deep_change_activity`](Account::deep_change_activity): Change the activity of one of the child `Accounts`
 ///
 ///
 /// # [Settings](Account#settings)
@@ -105,21 +108,19 @@ use types::errors::*;
 /// A `HashMap` holding [Settings](Setting). Contains all the settings present in the
 /// [child](Account#accounts) Accounts but can contain settings that aren't in them.
 ///
-///  - [accounts()](Account::accounts) Get an account's child `Accounts`
+///  - [`get`](Account::get): Returns a reference to the value corresponding to the key
 ///
-///  - [get](Account::get): Returns a reference to the value corresponding to the key
+///  - [`deep_get`](Account::deep_get): Returns a reference to the value corresponding to the key on a child Account
 ///
-///  - [deep_get](Account::deep_get): Returns a reference to the value corresponding to the key on a child Account
+///  - [`insert`](Account::insert): Inserts a key-value pair into the map.
 ///
-///  - [insert](Account::insert): Inserts a key-value pair into the map.
+///  - [`deep_insert`](Account::deep_insert):Inserts a key-value pair into the map of a child Account
 ///
-///  - [deep_insert](Account::deep_insert):Inserts a key-value pair into the map of a child Account
+///  - [`keys`](Account::keys): An iterator visiting all keys in arbitrary order
 ///
-///  - [keys](Account::keys): An iterator visiting all keys in arbitrary order
+///  - [`contains_key`](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
 ///
-///  - [contains_key](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
-///
-///  - [capacity](Account::capacity): Returns the number of elements the map can hold without reallocating.
+///  - [`capacity`](Account::capacity): Returns the number of elements the map can hold without reallocating.
 ///
 ///
 /// # [Accounts](Account#accounts)
@@ -128,17 +129,18 @@ use types::errors::*;
 /// A `Vec` of Accounts. The Account that holds the `Vec` is the parent Account and the Accounts that are being held
 /// are the child Accounts.
 ///
-///  - [accounts()](Account::accounts): Get an Account's child `Accounts`
+///  - [`accounts`](Account::accounts): Get an Account's child `Accounts`
 ///
-///  - [len](Account::len): Returns the number of elements in the `Vec`.
+///  - [`len`](Account::len): Returns the number of elements in the `Vec`.
 ///
-///  - [is_empty](Account::is_empty): Returns `true` if the `Vec` contains no elements.
+///  - [`is_empty`](Account::is_empty): Returns `true` if the `Vec` contains no elements.
 ///
-///  - [push](Account::push): Appends an `Account` to the back of the `Vec`.
+///  - [`push`](Account::push): Appends an `Account` to the back of the `Vec`.
 ///
-///  - [pop](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
+///  - [`pop`](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 ///
-///  - [pop_remove](Account::pop_remove): [pop](Account::pop) but also removes the settings from the main account. Cache
+///  - [`pop_keep`](Account::pop_keep): [pop](Account::pop) but keeps settings in the main account
+///     even if they are not present in other child accounts
 ///
 ///
 /// # [Valid](Account#valid)
@@ -171,8 +173,10 @@ use types::errors::*;
 /// They accept an extra `Vec` of `&str` that are the list of child `Accounts`
 /// you have to pass though to get to the child `Account` the function will be called.
 ///
-///
+/// Deep functions can return [`DeepError`]'s
+///  
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[must_use]
 pub struct Account {
     name: String,
     active: bool,
@@ -227,9 +231,9 @@ impl Account {
         name: &str,
         active: bool,
         settings: HashMap<String, Box<dyn Setting>>,
-        accounts: Vec<Account>,
+        accounts: Vec<Self>,
     ) -> Self {
-        Account {
+        Self {
             name: name.to_string(),
             active,
             settings,
@@ -291,19 +295,17 @@ impl Account {
         name: &str,
         active: bool,
         settings: HashMap<String, Box<dyn Setting>>,
-        accounts: Vec<Account>,
+        accounts: Vec<Self>,
     ) -> Result<Self, InvalidAccountError> {
-        let new_account = Account {
+        let new_account = Self {
             name: name.to_string(),
             active,
             settings,
             accounts,
         };
-        if let Some(error) = new_account.is_invalid() {
-            Err(error)
-        } else {
-            Ok(new_account)
-        }
+        new_account
+            .is_invalid()
+            .map_or_else(|| Ok(new_account), Err)
     }
     fn is_invalid(&self) -> Option<InvalidAccountError> {
         let accounts = self.accounts_names();
@@ -316,7 +318,7 @@ impl Account {
         }
         drop(hash_set); // dropping map here as it isn't needed anymore and being a recursive function the memory usage would keep increasing.
                         //todo!() check if it's dropped automatically by the compiler.
-        for account in self.accounts().iter() {
+        for account in self.accounts() {
             if let Some(error) = account.is_invalid() {
                 return Some(error);
             }
@@ -338,6 +340,7 @@ impl Account {
     ///
     /// assert_eq!(account.name(), "New account");
     /// ```
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -366,6 +369,7 @@ impl Account {
     /// );
     ///
     /// ```
+    #[must_use]
     pub fn settings(&self) -> &HashMap<String, Box<dyn Setting>> {
         &self.settings
     }
@@ -395,7 +399,8 @@ impl Account {
     /// );
     ///
     /// ```
-    pub fn accounts(&self) -> &Vec<Account> {
+    #[must_use]
+    pub const fn accounts(&self) -> &Vec<Self> {
         &self.accounts
     }
     /// Return `true` if the `Account` is active
@@ -415,7 +420,8 @@ impl Account {
     /// assert!(!account.active());
     ///
     /// ```
-    pub fn active(&self) -> bool {
+    #[must_use]
+    pub const fn active(&self) -> bool {
         self.active
     }
     /// Takes a `bool` and changes the value of active, returns `true` if changes were made.
@@ -443,8 +449,12 @@ impl Account {
     }
     /// Takes a `bool` and changes the value of active of a child `Account`.
     ///
-    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`change_activity`](Account::change_activity) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
     ///
     /// # Examples
     ///
@@ -486,24 +496,21 @@ impl Account {
         new_active: bool,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
                                        //left is the account we rename, right is the first child of the Account we call
-    ) -> Result<bool, DeepChangeError> {
-        let account_to_find = if let Some(account_name) = account_names.pop() {
-            account_name
-        } else {
-            return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+    ) -> Result<bool, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_change_activity(new_active, account_names) {
+        self.mut_account_from_name(account_to_find).map_or(
+            Err(DeepError::NotFound),
+            |found_account| match found_account.deep_change_activity(new_active, account_names) {
                 //recursive call
                 Err(error) => match error {
-                    DeepChangeError::EmptyVec => Ok(found_account.change_activity(new_active)), //base case
-                    _ => Err(error), //error, impossible/invalid function call
+                    DeepError::EmptyVec => Ok(found_account.change_activity(new_active)), //base case
+                    DeepError::NotFound => Err(error), //error, invalid function call
                 },
                 Ok(value) => Ok(value),
-            }
-        } else {
-            Err(DeepChangeError::NotFound)
-        }
+            },
+        )
     }
     /// Takes a `&str` and updates the name of the `Account`.
     ///
@@ -530,11 +537,15 @@ impl Account {
     }
     /// Takes a `&str` and updates the name of a child `Account`.
     ///
-    /// Part of the deep_functions group that accept a `Vec` of &str to identify
-    /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
-    ///
     /// This can make a Account [invalid](Account#valid) if the child Account
     /// got renamed to the same name as one of it's siblings.
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
     ///
     /// # Examples
     ///
@@ -576,29 +587,30 @@ impl Account {
         new_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
                                        //left is the account we rename, right is the first child of the Account we call
-    ) -> Result<String, DeepChangeError> {
-        let account_to_find = if let Some(account_name) = account_names.pop() {
-            account_name
-        } else {
-            return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+    ) -> Result<String, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_rename(new_name, account_names) {
+        self.mut_account_from_name(account_to_find).map_or(
+            Err(DeepError::NotFound),
+            |found_account| match found_account.deep_rename(new_name, account_names) {
                 //recursive call
                 Err(error) => match error {
-                    DeepChangeError::EmptyVec => Ok(found_account.rename(new_name)), //base case
-                    _ => Err(error), //error, impossible/invalid function call
+                    DeepError::EmptyVec => Ok(found_account.rename(new_name)), //base case
+                    DeepError::NotFound => Err(error), //error, invalid function call
                 },
                 Ok(value) => Ok(value),
-            }
-        } else {
-            Err(DeepChangeError::NotFound)
-        }
+            },
+        )
     }
     /// Returns a reference to the value corresponding to the key in a child `Account`.
     ///
-    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`get`](Account::get) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
     ///
     /// # Examples
     ///
@@ -636,26 +648,24 @@ impl Account {
         setting_name: &str,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
                                        //left is the account we rename, right is the first child of the Account we call
-    ) -> Result<Option<&Box<dyn Setting>>, DeepChangeError> {
-        let account_to_find = if let Some(account_name) = account_names.pop() {
-            account_name
-        } else {
-            return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+    ) -> Result<Option<&Box<dyn Setting>>, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        if let Some(found_account) = self.account_from_name(account_to_find) {
-            match found_account.deep_get(setting_name, account_names) {
-                //recursive call
-                Err(error) => match error {
-                    DeepChangeError::EmptyVec => Ok(found_account.get(setting_name)), //base case
-                    _ => Err(error), //error, impossible/invalid function call
+        self.account_from_name(account_to_find)
+            .map_or(
+                Err(DeepError::NotFound),
+                |found_account| match found_account.deep_get(setting_name, account_names) {
+                    //recursive call
+                    Err(error) => match error {
+                        DeepError::EmptyVec => Ok(found_account.get(setting_name)), //base case
+                        DeepError::NotFound => Err(error), //error, invalid function call
+                    },
+                    Ok(value) => Ok(value),
                 },
-                Ok(value) => Ok(value),
-            }
-        } else {
-            Err(DeepChangeError::NotFound)
-        }
+            )
     }
-    fn account_from_name(&self, name: &str) -> Option<&Account> {
+    fn account_from_name(&self, name: &str) -> Option<&Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&self.accounts[account]);
@@ -683,16 +693,21 @@ impl Account {
     /// assert!(account.accounts_names() == vec!["1","2","3"]);
     ///
     /// ```
+    #[must_use]
     pub fn accounts_names(&self) -> Vec<&str> {
-        self.accounts.iter().map(|a| a.name()).collect()
+        self.accounts.iter().map(Self::name).collect()
     }
     /// Inserts a key-value pair into the map of a child `Account`.
     ///
     /// This will updated the [settings](Account#settings) of all necessary Accounts
     /// so that the parent Account remains [valid](Account#valid)
     ///
-    /// Part of the deep_functions group that accept a `Vec` of &str to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
     ///
     /// # Examples
     ///
@@ -731,12 +746,11 @@ impl Account {
         setting_value: Box<dyn Setting>,
         account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
                                        //left is where we insert the value, right is the first child of the Account we call
-    ) -> Result<Option<Box<dyn Setting>>, DeepChangeError> {
-        let account_to_find = if let Some(account_name) = account_names.pop() {
-            account_name
-        } else {
-            return Err(DeepChangeError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+    ) -> Result<Option<Box<dyn Setting>>, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
+        #[allow(clippy::option_if_let_else)]
         if let Some(found_account) = self.mut_account_from_name(account_to_find) {
             match found_account.deep_insert(setting_name, setting_value.clone(), account_names) {
                 //recursive call
@@ -747,14 +761,12 @@ impl Account {
                     Ok(insert_option) //returning the original value from the base case
                 }
                 Err(error) => match error {
-                    DeepChangeError::EmptyVec => {
-                        Ok(found_account.insert(setting_name, setting_value))
-                    } //base case
-                    _ => Err(error), //error, impossible/invalid function call
+                    DeepError::EmptyVec => Ok(found_account.insert(setting_name, setting_value)), //base case
+                    DeepError::NotFound => Err(error), //error, invalid function call
                 },
             }
         } else {
-            Err(DeepChangeError::NotFound)
+            Err(DeepError::NotFound)
         }
     }
     /// Updates a setting with the value its supposed to have.
@@ -786,7 +798,7 @@ impl Account {
             None
         }
     }
-    fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Account> {
+    fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&mut self.accounts[account]);
@@ -835,7 +847,7 @@ impl Account {
     ///     )
     /// )
     /// ```
-    pub fn push_unchecked(&mut self, account: Account) {
+    pub fn push_unchecked(&mut self, account: Self) {
         if account.active {
             for setting in account.settings.keys() {
                 self.insert(setting, account.get(setting).unwrap().clone());
@@ -858,6 +870,7 @@ impl Account {
     /// assert_eq!(account.contains_key("a small number"), true);
     /// assert_eq!(account.contains_key("a big number"), false);
     /// ```
+    #[must_use]
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
@@ -878,6 +891,7 @@ impl Account {
     /// assert_eq!(account.get("a small number"), Some(&42.stg()));
     /// assert_eq!(account.get("a big number"), None);
     /// ```
+    #[must_use]
     #[allow(clippy::borrowed_box)]
     pub fn get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
         self.settings.get(setting_name)
@@ -915,7 +929,7 @@ impl Account {
         let mut return_value = None;
         if let Some(value) = self
             .settings
-            .insert(setting_name.to_string(), setting_value.clone())
+            .insert(setting_name.to_string(), setting_value)
         {
             return_value = Some(value);
         }
@@ -951,6 +965,7 @@ impl Account {
     ///
     /// In the current implementation, iterating over keys takes O(capacity) time
     /// instead of O(len) because it internally visits empty buckets too.
+    #[must_use]
     pub fn keys(&self) -> hash_map::Keys<'_, String, Box<dyn Setting>> {
         self.settings.keys()
     }
@@ -969,6 +984,7 @@ impl Account {
     /// let account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
+    #[must_use]
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
@@ -993,6 +1009,7 @@ impl Account {
     ///     );
     /// assert_eq!(account.len(), 3);
     /// ```
+    #[must_use]
     pub fn len(&self) -> usize {
         self.accounts.len()
     }
@@ -1010,6 +1027,7 @@ impl Account {
     /// account.push(Account::default());
     /// assert!(!account.is_empty());
     /// ```
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.accounts.is_empty()
     }
@@ -1055,7 +1073,7 @@ impl Account {
     /// assert!(account.push(Account::new("3", Default::default(), Default::default(), Default::default()))
     ///     == Some(InvalidAccountError::ExistingName));
     /// ```
-    pub fn push(&mut self, account: Account) -> Option<InvalidAccountError> {
+    pub fn push(&mut self, account: Self) -> Option<InvalidAccountError> {
         if self.accounts_names().contains(&account.name()) {
             //check if account has the same name as a sibling account
             return Some(InvalidAccountError::ExistingName);
@@ -1106,7 +1124,7 @@ impl Account {
     ///     )
     /// )
     /// ```
-    pub fn pop_keep(&mut self) -> std::option::Option<Account> {
+    pub fn pop_keep(&mut self) -> std::option::Option<Self> {
         self.accounts.pop()
     }
     /// Removes the last element from a vector and returns it, or [`None`] if it empty.
@@ -1144,7 +1162,7 @@ impl Account {
     ///     )
     /// )
     /// ```
-    pub fn pop(&mut self) -> std::option::Option<Account> {
+    pub fn pop(&mut self) -> std::option::Option<Self> {
         let popped_account = self.accounts.pop()?;
         for setting in popped_account.keys() {
             if !self.vec_contains_key(setting) {
@@ -1153,6 +1171,7 @@ impl Account {
         }
         Some(popped_account)
     }
+    #[must_use]
     fn vec_contains_key(&self, setting: &str) -> bool {
         for account in self.accounts() {
             if account.contains_key(setting) {
@@ -1162,7 +1181,8 @@ impl Account {
         false
     }
     ///todo!()
-    pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Account> {
+    #[must_use]
+    pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Self> {
         self.accounts.get_mut(index)
     }
     /*
@@ -1183,9 +1203,9 @@ impl Account {
 impl Default for Account {
     fn default() -> Self {
         Self {
-            name: Default::default(),
-            settings: Default::default(),
-            accounts: Default::default(),
+            name: String::default(),
+            settings: HashMap::default(),
+            accounts: Vec::default(),
             active: true,
         }
     }
@@ -1230,11 +1250,27 @@ impl PartialEq for Box<dyn Setting> {
 /// let bool_stg: Box<dyn Setting> = stg(bool);
 /// assert!(bool_stg == bool.stg())
 /// ```
+#[must_use]
 pub fn stg<T: Setting>(value: T) -> Box<dyn Setting> {
     value.stg()
 }
-///turns a [`Box<dyn Setting>`] into a type implementing [`Setting`],can [`panic!`]
+/// turns a [`Box<dyn Setting>`] into a `T`,can [`panic!`]
 ///
+/// This is the main function used to get a concrete type out of a `Box<dyn Setting>`.
+///
+/// # Panics
+///
+/// We need to be careful using `unstg` as if we try convert to a type
+/// that isn't the one contained in the `dyn Setting` the program will panic.
+/// Consider using [`safe_unstg`] as it returns a result type instead.
+///
+/// ```should_panic
+/// use hashmap_settings::{Setting,stg,unstg};
+///
+/// let bool_stg: Box<dyn Setting> = stg(true);
+/// let _number :i32 = unstg(bool_stg);
+/// // this panics, as the Box<dyn Setting> holds a bool value but we are trying to convert it to a i32
+/// ```
 /// # Examples
 ///
 /// ```
@@ -1252,24 +1288,55 @@ pub fn stg<T: Setting>(value: T) -> Box<dyn Setting> {
 /// // here we don't as we specific the type annotation when we use :bool
 /// assert_eq!(bool, true);
 /// ```
-/// We need to be careful using .unstg as if we try convert to the wrong type the program will panic.
-/// Consider using [`safe_unstg`] as it returns a result type instead.
-/// ```should_panic
-/// use hashmap_settings::{Setting,stg,unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// let _number :i32 = unstg(bool_stg);
-/// // this panics, as the Box<dyn Setting> holds a bool value but we are trying to convert it to a i32
-///
-/// ```
+#[must_use]
 pub fn unstg<T: Setting>(stg: Box<dyn Setting>) -> T {
     let x: Box<dyn Any> = stg;
     *x.downcast().unwrap()
 }
-///turns a [`Box<dyn Setting>`] into a [`Result`] type implementing [`Setting`]
+/// turns a [`Box<dyn Setting>`] into a [`Box<T>`]
+///
+/// [´unstg´] is the main way to get a value out of a `Box<dyn Setting>` but
+/// `safe_unstg` is used for when there is a chance we might convert to a
+/// type that isn't the one contained in the `dyn Setting`.
+///
+/// Dealing with a `Ok(Box<T>)` can be inconvenient so consider
+/// using [`unstg`] if it's guaranteed that we will convert to the right type.
+///
+/// # Example
 ///
 /// ```
-/// # // todo!() add examples
+/// use hashmap_settings::{Setting,stg,safe_unstg};
+///
+/// let bool_stg: Box<dyn Setting> = stg(true);
+/// assert_eq!(safe_unstg::<bool>(bool_stg).unwrap(), Box::new(true));
+/// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+/// ```
+///
+/// ```
+/// use hashmap_settings::{Setting,stg,safe_unstg};
+///
+/// let bool_stg: Box<dyn Setting> = stg(true);
+/// let bool :bool = *safe_unstg(bool_stg).unwrap();
+/// // here we don't as we specific the type annotation when we use :bool
+/// assert_eq!(bool, true);
+/// ```
+///
+/// # Errors
+///
+/// This function returns a Err(Box<dyn Any>) if we try to covert to the wrong type.
+///
+/// ```
+/// use hashmap_settings::{Setting,stg,safe_unstg};
+///
+/// let bool_stg: Box<dyn Setting> = stg(true);
+/// let number = match safe_unstg::<i32>(bool_stg){
+///     Ok(x)   => *x, //unreachable!()
+///     Err(x)  => {
+///         print!("wrong conversion {:?}",x);
+///         404
+///     },
+/// };
+/// assert_eq!(number, 404)
 /// ```
 pub fn safe_unstg<T: Setting>(stg: Box<dyn Setting>) -> Result<Box<T>, Box<dyn Any>> {
     let x: Box<dyn Any> = stg;
@@ -1301,8 +1368,8 @@ mod tests {
         let mut account1 = Account::new(
             "name",
             Default::default(),
-            Default::default(),
-            Default::default(),
+            HashMap::default(),
+            Vec::default(),
         );
         account1.insert("answer to everything", 42.stg());
         account1.insert("true is true", true.stg());
@@ -1314,7 +1381,7 @@ mod tests {
                 ("true is true".to_string(), true.stg()),
             ]
             .into(),
-            Default::default(),
+            Vec::default(),
         );
         assert!(account1 == account2);
     }
