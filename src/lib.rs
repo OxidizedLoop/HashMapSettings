@@ -1335,6 +1335,21 @@ impl Default for Account {
 impl Setting for Account {}
 
 /// Required trait for any type that that will be used as a setting
+///
+/// For a Type to be able to implement Setting it needs to implement the traits
+/// [Clone], [Debug], [PartialEq] (and [currently](https://github.com/OxidizedLoop/HashMapSettings/issues/25)
+/// serde's [Deserialize] and [Serialize])
+///
+/// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting,
+/// but for now you can do it by adding the following lines:
+/// ```
+/// # use hashmap_settings::Setting;
+/// # use serde::{Deserialize, Serialize};
+/// # #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+/// # pub struct MyType{}
+///#[typetag::serde]
+///impl Setting for MyType{}
+/// ```
 #[typetag::serde(tag = "setting")]
 pub trait Setting: Any + Debug + DynClone + DynEq {
     ///turns a type implementing [Setting] into a [Box<dyn Setting>]
