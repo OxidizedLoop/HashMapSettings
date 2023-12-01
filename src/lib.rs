@@ -699,6 +699,8 @@ impl Account {
     }
     /// Inserts a key-value pair into the map of a child `Account`.
     ///
+    /// Use [deep_insert](Account::deep_insert) to insert a `T` instead of a `Box<dyn Setting>`.
+    ///
     /// This will updated the [settings](Account#settings) of all necessary Accounts
     /// so that the parent Account remains [valid](Account#valid)
     ///
@@ -737,10 +739,10 @@ impl Account {
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_insert("int", 777.stg() ,&mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&777.stg())));
+    /// assert_eq!(account.deep_insert_box("int", 777.stg(), &mut vec!["3_2","3"]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep_get("int", &mut vec!["3_2","3"]), Ok(Some(&777.stg())));
     /// ```
-    pub fn deep_insert(
+    pub fn deep_insert_box(
         &mut self,
         setting_name: &str,
         setting_value: Box<dyn Setting>,
@@ -752,7 +754,8 @@ impl Account {
         };
         #[allow(clippy::option_if_let_else)]
         if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_insert(setting_name, setting_value.clone(), account_names) {
+            match found_account.deep_insert_box(setting_name, setting_value.clone(), account_names)
+            {
                 //recursive call
                 Ok(insert_option) => {
                     self.update_setting(setting_name);
@@ -761,13 +764,69 @@ impl Account {
                     Ok(insert_option) //returning the original value from the base case
                 }
                 Err(error) => match error {
-                    DeepError::EmptyVec => Ok(found_account.insert(setting_name, setting_value)), //base case
+                    DeepError::EmptyVec => {
+                        Ok(found_account.insert_box(setting_name, setting_value))
+                    } //base case
                     DeepError::NotFound => Err(error), //error, invalid function call
                 },
             }
         } else {
             Err(DeepError::NotFound)
         }
+    }
+    /// Inserts a key-value pair into the map of a child `Account`.
+    ///
+    /// This method is a call to [deep_insert_box](Account::deep_insert_box) after T is turned into a Box<dyn Setting>.
+    ///
+    /// This will updated the [settings](Account#settings) of all necessary Accounts
+    /// so that the parent Account remains [valid](Account#valid)
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new(
+    ///                 "3_2",
+    ///                 true,
+    ///                 HashMap::from([
+    ///                     ("int".to_string(),42.stg()),
+    ///                     ("bool".to_string(),true.stg()),
+    ///                     ("char".to_string(),'c'.stg()),
+    ///                 ]),
+    ///                 Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.deep_insert("int", 777, &mut vec!["3_2","3"]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep_get("int", &mut vec!["3_2","3"]), Ok(Some(&777.stg())));
+    /// ```
+    pub fn deep_insert<T: Setting>(
+        &mut self,
+        setting_name: &str,
+        setting_value: T,
+        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
+                                       //left is where we insert the value, right is the first child of the Account we call
+    ) -> Result<Option<Box<dyn Setting>>, DeepError> {
+        self.deep_insert_box(setting_name, setting_value.stg(), account_names)
     }
     /// Updates a setting with the value its supposed to have.
     ///
@@ -791,7 +850,7 @@ impl Account {
                     let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
                     return Some(
                         !self
-                            .insert(setting, temp.clone())
+                            .insert_box(setting, temp.clone())
                             .map_or(false, |x| x == temp),
                     );
                 } //todo!()improve this so cloning twice isn't necessary
@@ -819,7 +878,7 @@ impl Account {
             if self.accounts[account].active() {
                 if let Some(value) = self.accounts[account].get(setting) {
                     let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
-                    self.insert(setting, temp);
+                    self.insert_box(setting, temp);
                 } //todo!() improve this so cloning isn't necessary
             }
         }
@@ -876,7 +935,7 @@ impl Account {
     pub fn push_unchecked(&mut self, account: Self) {
         if account.active {
             for setting in account.settings.keys() {
-                self.insert(setting, account.get(setting).unwrap().clone());
+                self.insert_box(setting, account.get(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -890,9 +949,9 @@ impl Account {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Setting};
+    /// use hashmap_settings::{Account};
     /// let mut account : Account = Default::default();
-    /// account.insert("a small number", 42.stg());
+    /// account.insert("a small number", 42);
     /// assert_eq!(account.contains_key("a small number"), true);
     /// assert_eq!(account.contains_key("a big number"), false);
     /// ```
@@ -913,7 +972,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
-    /// account.insert("a small number", 42.stg());
+    /// account.insert("a small number", 42);
     /// assert_eq!(account.get("a small number"), Some(&42.stg()));
     /// assert_eq!(account.get("a big number"), None);
     /// ```
@@ -923,6 +982,8 @@ impl Account {
         self.settings.get(setting_name)
     }
     /// Inserts a key-value pair into the map.
+    ///
+    /// This method is a call to [insert_box](Account::insert_box) after T is turned into a Box<dyn Setting>.
     ///
     /// If the map did not have this key present, None is returned.
     ///
@@ -940,14 +1001,48 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
-    /// assert_eq!(account.insert("a small number", 1.stg()), None);
+    /// assert_eq!(account.insert("a small number", 1), None);
     /// assert_eq!(account.settings().is_empty(), false);
     ///
-    /// account.insert("a small number", 2.stg());
-    /// assert_eq!(account.insert("a small number", 3.stg()), Some(2.stg()));
+    /// account.insert("a small number", 2);
+    /// assert_eq!(account.insert("a small number", 3), Some(2.stg()));
     /// assert!(account.settings()[&"a small number".to_string()] == 3.stg());
     /// ```
-    pub fn insert(
+    pub fn insert<T: Setting>(
+        &mut self,
+        setting_name: &str,
+        setting_value: T,
+    ) -> Option<Box<dyn Setting>> {
+        self.insert_box(setting_name, setting_value.stg())
+    }
+    /// Inserts a key-value pair into the map.
+    ///
+    /// Use [insert](Account::insert) to insert a `T` instead of a `Box<dyn Setting>`.
+    ///
+    /// If the map did not have this key present, None is returned.
+    ///
+    /// If the map did have this key present, the value is updated, and the old
+    /// value is returned. The key is not updated, though; this matters for
+    /// types that can be `==` without being identical. See the [module-level
+    /// documentation] for more.
+    ///
+    /// [module-level documentation]: std::collections#insert-and-complex-keys
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account : Account = Default::default();
+    /// assert_eq!(account.insert_box("a small number", 1.stg()), None);
+    /// assert_eq!(account.settings().is_empty(), false);
+    ///
+    /// account.insert_box("a small number", 2.stg());
+    /// assert_eq!(account.insert_box("a small number", 3.stg()), Some(2.stg()));
+    /// assert!(account.settings()[&"a small number".to_string()] == 3.stg());
+    /// ```
+    pub fn insert_box(
         &mut self,
         setting_name: &str,
         setting_value: Box<dyn Setting>,
@@ -1110,7 +1205,7 @@ impl Account {
         }
         if account.active {
             for setting in account.settings.keys() {
-                self.insert(setting, account.get(setting).unwrap().clone());
+                self.insert_box(setting, account.get(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -1380,8 +1475,8 @@ mod tests {
         let bool_setting = true;
         let i32_setting = 42;
         let mut account = Account::default();
-        account.insert("bool_setting", Box::new(bool_setting));
-        account.insert("i32_setting", i32_setting.stg());
+        account.insert("bool_setting", bool_setting);
+        account.insert("i32_setting", i32_setting);
         let i32s: i32 = unstg(account.get("i32_setting").unwrap().clone());
         assert_eq!(i32s, 42);
         let stg: Box<dyn Setting> = account.get("bool_setting").unwrap().clone();
@@ -1399,8 +1494,8 @@ mod tests {
             HashMap::default(),
             Vec::default(),
         );
-        account1.insert("answer to everything", 42.stg());
-        account1.insert("true is true", true.stg());
+        account1.insert("answer to everything", 42);
+        account1.insert("true is true", true);
         let account2 = Account::new(
             "name",
             Default::default(),
