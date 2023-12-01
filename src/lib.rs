@@ -771,10 +771,11 @@ impl Account {
     }
     /// Updates a setting with the value its supposed to have.
     ///
-    ///
-    ///
     /// Returns `None` if the setting isn't present in the Account or child Accounts.
-    /// Returns true if the value of the setting was updated.
+    /// Returns `Some(true)` if the value of the setting was updated.
+    /// Returns `Some(false)` if the value of the Account but was not updated.
+    ///
+    /// if you don't need the return value use [update_setting](update_setting) as it is faster
     ///
     /// If an Account is [valid](Account#valid) this method never returns Some(true)
     /// as this method is used to turn an invalid Account into a valid one.
@@ -783,12 +784,16 @@ impl Account {
     /// ```
     ///  //todo!() add example
     /// ```
-    pub fn update_setting(&mut self, setting: &str) -> Option<bool> {
+    pub fn update_setting_returns(&mut self, setting: &str) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active() {
                 if let Some(value) = self.accounts[account].get(setting) {
                     let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
-                    return Some(!(self.insert(setting, temp.clone()) == Some(temp)));
+                    return Some(
+                        !self
+                            .insert(setting, temp.clone())
+                            .map_or(false, |x| x == temp),
+                    );
                 } //todo!()improve this so cloning twice isn't necessary
             }
         }
@@ -796,6 +801,27 @@ impl Account {
             Some(false)
         } else {
             None
+        }
+    }
+    /// Updates a setting with the value its supposed to have.
+    ///
+    /// This function doesn't return anything, consider using [update_setting_returns](Account::update_setting_returns)
+    /// if a return value is needed.
+    ///
+    /// If an Account is [valid](Account#valid) this wont do anything.
+    ///
+    /// # Examples
+    /// ```
+    ///  //todo!() add example
+    /// ```
+    pub fn update_setting(&mut self, setting: &str) {
+        for account in (0..self.len()).rev() {
+            if self.accounts[account].active() {
+                if let Some(value) = self.accounts[account].get(setting) {
+                    let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
+                    self.insert(setting, temp);
+                } //todo!() improve this so cloning isn't necessary
+            }
         }
     }
     fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Self> {
