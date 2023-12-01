@@ -1236,6 +1236,8 @@ impl Default for Account {
         }
     }
 }
+#[typetag::serde]
+impl Setting for Account {}
 
 /// Required trait for any type that that will be used as a setting
 #[typetag::serde(tag = "setting")]
