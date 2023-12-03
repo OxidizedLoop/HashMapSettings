@@ -1,8 +1,68 @@
-# HashMap wrapper for layered Settings
+# HashMapSettings [![Version]][Crates.io] [![Documentation]][Docs.rs] [![Build Status]][Actions]
 
-This crate allows you to store and access all your program settings by calling a single Account struct regardless of the type that those settings implement.
+[Version]: https://img.shields.io/crates/v/hashmap_settings.svg
+[Crates.io]: https://crates.io/crates/hashmap_settings
+[Documentation]: https://img.shields.io/docsrs/hashmap_settings/latest
+[Docs.rs]: https://docs.rs/hashmap_settings
+[Build Status]: https://img.shields.io/github/actions/workflow/status/OxidizedLoop/HashMapSettings/rust.yml
+[Actions]: https://github.com/OxidizedLoop/HashMapSettings/actions
 
-This crate gives the tools necessary for a developer to create layered settings. This allows users of the application to not only have different settings for different environments, but also have groups of settings that they can easily swap.
+## **A HashMap wrapper for layered Settings of distinct types**
+
+This crate allows a developer to store and access all program settings on a `Account` struct, a wrapper around a `HashMap` that can hold any type that implements `Setting`.
+
+An `Account` can also hold other Accounts, allowing the existence of layered settings.
+
+This makes it possible to create complex systems where multiple places (eg: Themes, Extensions, Global User Settings, Local User Settings) are changing the same settings, and the value is taken from the top layer containing the setting or the default layer if no other layer contained it.
+
+## How to use
+
+Add the following line to your Cargo.toml:
+
+```toml
+[dependencies]
+hashmap_settings = "0.4"
+```
+
+Add the following line to your .rs file:
+
+```rust
+use hashmap_settings::{Account,Setting,unstg,safe_unstg};
+```
+
+In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting, but for now you can implement it by adding the following lines:
+
+```rust
+#[typetag::serde]
+impl Setting for MyType {}
+```
+
+([Currently](https://github.com/OxidizedLoop/HashMapSettings/issues/25) there is a need types to implement serde's Serialize and Deserialize )
+
+Basic use of an `Account`:
+
+```rust
+let mut account = Account::default(); //creating a basic account
+
+//inserting values of distinct types
+account.insert("Number of trees",5);
+account.insert("Grass color","green".to_string());
+account.insert("Today is good",true);
+
+//getting values from the account (check issue #27)
+let today_bool: bool = unstg(account.get("Today is good").unwrap().clone());
+let grass_color: String = unstg(account.get("Grass color").unwrap().clone());
+let trees: i32 = unstg(account.get("Number of trees").unwrap().clone());
+
+//be careful as this would panic!:
+//let grass: i32 = unstg(account.get("Grass Color").unwrap().clone());
+//there is a safe_unstg() returning a Result that can be used to prevent mistakes.
+
+//example of using the values 
+print!("It's {today_bool} that today is a wonderful day, the grass is {grass_color} and I can see {trees} trees in the distance");
+```
+
+(At the moment getting values of an account isn't user friend but it will be changed in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 
 ## License
 

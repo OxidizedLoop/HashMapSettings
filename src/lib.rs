@@ -1,14 +1,69 @@
-//! `HashMap` wrapper for layered Settings
+//! `HashMap` wrapper for layered Settings of distinct types.
 //!
-//! This crate allows you to store and access all your program settings by calling a single Account
-//! struct regardless of the type that those settings implement.
+//! This crate allows a developer to store and access all program settings on a [`Account`] struct,
+//! a wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
+//!```
+//!# use hashmap_settings::Setting;
+//!# use serde::{Deserialize, Serialize};
+//!# #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+//!# pub struct MyType{}
+//!#[typetag::serde]
+//!impl Setting for MyType{}
+//! ```
+//!  
+//! An Account can also hold other [Accounts](Account#accounts), allowing the existence of layered settings.
+//!
+//! This makes it possible to create complex systems where multiple places
+//! (eg: Themes, Extensions, Global User Settings, Local User Settings)
+//! are changing the same settings, and the value is taken from the top layer containing the setting
+//! or the default layer if no other layer contained it.
 //!
 //! This crate gives the tools necessary for a developer to create layered settings.
 //! This allows users of the application to not only have different settings for different environments,
 //! but also have groups of settings that they can easily swap.
-//!  ```
-//! # // todo!() add examples
+//!
+//! ## How to use
+//!
+//! Add the following line to your Cargo.toml:
+//!
+//! ```toml
+//! [dependencies]
+//! hashmap_settings = "0.4"
 //! ```
+//!
+//! Add the following line to your .rs file:
+//!
+//! ```
+//! # #[allow(warnings)]
+//! use hashmap_settings::{Account,Setting,unstg,safe_unstg};
+//! ```
+//!
+//! Basic use of an `Account`:
+//!
+//! ```rust
+//! # use hashmap_settings::{Account,unstg};
+//! let mut account = Account::default(); //creating a basic account
+//!
+//! //inserting values of distinct types
+//! account.insert("Number of trees",5);
+//! account.insert("Grass color","green".to_string());
+//! account.insert("Today is good",true);
+//!
+//! //getting values from the account (check issue #27)
+//! let today_bool: bool = unstg(account.get("Today is good").unwrap().clone());
+//! let grass_color: String = unstg(account.get("Grass color").unwrap().clone());
+//! let trees: i32 = unstg(account.get("Number of trees").unwrap().clone());
+//!
+//! //be careful as this would panic!:
+//! //let grass: i32 = unstg(account.get("Grass Color").unwrap().clone());
+//! //there is a safe_unstg() returning a Result that can be used to prevent mistakes.
+//!
+//! //example of using the values
+//! print!("It's {today_bool} that today is a wonderful day,
+//!     the grass is {grass_color} and I can see {trees} trees in the distance");
+//! ```
+//! (At the moment getting values of an account isn't user friend but it will be changed in the
+//! [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 // clippy lints
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
@@ -116,6 +171,10 @@ use types::errors::{DeepError, InvalidAccountError};
 ///
 ///  - [`deep_insert`](Account::deep_insert):Inserts a key-value pair into the map of a child Account
 ///
+///  - [`insert_box`](Account::insert): `insert` but `Box<dyn Setting>` instead of T
+///
+///  - [`deep_insert_box`](Account::deep_insert_box): `deep_insert` but `Box<dyn Setting>` instead of T
+///
 ///  - [`keys`](Account::keys): An iterator visiting all keys in arbitrary order
 ///
 ///  - [`contains_key`](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
@@ -129,6 +188,12 @@ use types::errors::{DeepError, InvalidAccountError};
 /// A `Vec` of Accounts. The Account that holds the `Vec` is the parent Account and the Accounts that are being held
 /// are the child Accounts.
 ///
+/// The consider the bottom layer of the `Vec` Account at index 0, and the top layer the on at len()-1.
+///
+/// When the `Vec` is changed, the parent account will update its settings, such that when
+/// we use [get](Account.get) on the parent Account we obtain the value from the top layer
+/// containing the setting or return `None` if no layer contained it.
+///
 ///  - [`accounts`](Account::accounts): Get an Account's child `Accounts`
 ///
 ///  - [`len`](Account::len): Returns the number of elements in the `Vec`.
@@ -139,7 +204,7 @@ use types::errors::{DeepError, InvalidAccountError};
 ///
 ///  - [`pop`](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 ///
-///  - [`pop_keep`](Account::pop_keep): [pop](Account::pop) but keeps settings in the main account
+///  - [`pop_keep`](Account::pop_keep): `pop` but keeps settings in the main account
 ///     even if they are not present in other child accounts
 ///
 ///
