@@ -846,14 +846,14 @@ impl Account {
     pub fn update_setting_returns(&mut self, setting: &str) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active() {
-                if let Some(value) = self.accounts[account].get(setting) {
-                    let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
+                if let Some(value) = self.accounts[account].settings.get(setting) {
                     return Some(
                         !self
-                            .insert_box(setting, temp.clone())
-                            .map_or(false, |x| x == temp),
+                            .settings
+                            .insert(setting.to_string(), value.clone())
+                            .map_or(false, |x| &x == value),
                     );
-                } //todo!()improve this so cloning twice isn't necessary
+                }
             }
         }
         if self.settings.contains_key(setting) {
@@ -876,10 +876,9 @@ impl Account {
     pub fn update_setting(&mut self, setting: &str) {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active() {
-                if let Some(value) = self.accounts[account].get(setting) {
-                    let temp = value.clone(); //to prevent cannot borrow `self.accounts` as mutable because it is also borrowed as immutable Error
-                    self.insert_box(setting, temp);
-                } //todo!() improve this so cloning isn't necessary
+                if let Some(value) = self.accounts[account].settings.get(setting) {
+                    self.settings.insert(setting.to_string(), value.clone());
+                }
             }
         }
     }
