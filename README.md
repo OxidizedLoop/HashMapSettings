@@ -62,7 +62,7 @@ let trees: i32 = unstg(account.get("Number of trees").unwrap().clone());
 print!("It's {today_bool} that today is a wonderful day, the grass is {grass_color} and I can see {trees} trees in the distance");
 ```
 
-(At the moment getting values of an account isn't user friend but it will be changed in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
+(At the moment getting values of an account isn't user friendly but it will be changed in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 
 ## License
 
