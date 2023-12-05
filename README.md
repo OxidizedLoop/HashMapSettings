@@ -33,11 +33,9 @@ use hashmap_settings::{Account,Setting,unstg,safe_unstg};
 In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting, but for now you can implement it by adding the following lines:
 
 ```rust
-#[typetag::serde]
+#[typetag::serde] //if serde feature is activated
 impl Setting for MyType {}
 ```
-
-([Currently](https://github.com/OxidizedLoop/HashMapSettings/issues/25) there is a need types to implement serde's Serialize and Deserialize )
 
 Basic use of an `Account`:
 

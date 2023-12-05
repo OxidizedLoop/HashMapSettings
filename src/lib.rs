@@ -4,10 +4,10 @@
 //! a wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
 //!```
 //!# use hashmap_settings::Setting;
-//!# use serde::{Deserialize, Serialize};
-//!# #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+//!# //use serde::{Deserialize, Serialize};
+//!# #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 //!# pub struct MyType{}
-//!#[typetag::serde]
+//! // add #[typetag::serde] if serde feature is activated
 //!impl Setting for MyType{}
 //! ```
 //!  
@@ -84,6 +84,7 @@
 use core::fmt::Debug;
 use dyn_clone::DynClone;
 use dyn_ord::DynEq;
+#[cfg(feature ="serde")]
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
@@ -240,7 +241,8 @@ use types::errors::{DeepError, InvalidAccountError};
 ///
 /// Deep functions can return [`DeepError`]'s
 ///  
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub struct Account {
     name: String,
@@ -1395,26 +1397,25 @@ impl Default for Account {
         }
     }
 }
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for Account {}
 
 /// Required trait for any type that that will be used as a setting
 ///
 /// For a Type to be able to implement Setting it needs to implement the traits
-/// [Clone], [Debug], [PartialEq] (and [currently](https://github.com/OxidizedLoop/HashMapSettings/issues/25)
-/// serde's [Deserialize] and [Serialize])
+/// [Clone], [Debug], [PartialEq] (as well as [Deserialize] and [Serialize] if the "serde" feature is activated )
 ///
 /// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting,
 /// but for now you can do it by adding the following lines:
 /// ```
 /// # use hashmap_settings::Setting;
-/// # use serde::{Deserialize, Serialize};
-/// # #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+/// # // use serde::{Deserialize, Serialize};
+/// # #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 /// # pub struct MyType{}
-///#[typetag::serde]
+/// // add #[typetag::serde] if serde feature is activated
 ///impl Setting for MyType{}
 /// ```
-#[typetag::serde(tag = "setting")]
+#[cfg_attr(feature = "serde", typetag::serde(tag = "setting"))]
 pub trait Setting: Any + Debug + DynClone + DynEq {
     ///turns a type implementing [Setting] into a [Box<dyn Setting>]
     ///

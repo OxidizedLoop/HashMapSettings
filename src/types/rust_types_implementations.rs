@@ -6,96 +6,96 @@ the types were obtained by doing a copy paste of the page above followed by mult
 followed by commenting out any types that couldn't easily be added for the following reasons
 
 types not implemented:
-types that include any generic parameter. as #[typetag::serde] can't be added.
+types that include any generic parameter. as #[cfg_attr(feature = "serde", typetag::serde)] can't be added.
 types in rust unstable feature: !
 types in std::sync::atomic as they don't implement PartialEq needed for DynEq
 types that had some sort of lifetime error: str, std::path::Path, [u8], serde::de::IgnoredAny
 */
 
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::IpAddr{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::SocketAddr{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for bool{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for char{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for f32{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for f64{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for i8{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for i16{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for i32{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for i64{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for i128{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for isize{}
 /*
 impl Setting for !{}//Available on crate feature unstable only.
 */
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for u8{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for u16{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for u32{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for u64{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for u128{}
-#[typetag::serde(name = "unit")]
+#[cfg_attr(feature = "serde", typetag::serde(name = "unit"))]
 impl Setting for (){}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for usize{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for Box<str>{}//Available on crate features std or alloc only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for Box<std::ffi::CStr>{}//Available on crate features std or alloc only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for Box<std::ffi::OsStr>{}//Available on crate feature std and (Unix or Windows) only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for Box<std::path::Path>{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::ffi::CString{}//Available on crate features std or alloc only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for String{}//Available on crate features std or alloc only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::Ipv4Addr{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::Ipv6Addr{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::SocketAddrV4{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::net::SocketAddrV6{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroI8{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroI16{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroI32{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroI64{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroI128{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroIsize{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroU8{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroU16{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroU32{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroU64{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroU128{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::num::NonZeroUsize{}
 /*
 impl Setting for std::sync::atomic::AtomicBool{}//Available on crate feature // std and target_has_atomic="8"
@@ -110,13 +110,13 @@ impl Setting for std::sync::atomic::AtomicU32{}//Available on crate feature // s
 impl Setting for std::sync::atomic::AtomicU64{}//Available on crate feature // std and target_has_atomic="64"
 impl Setting for std::sync::atomic::AtomicUsize{}//Available on crate feature // std and target_has_atomic="ptr"
 */
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::time::Duration{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::ffi::OsString{}//Available on crate feature std and (Unix or Windows) only.{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::path::PathBuf{}
-#[typetag::serde]
+#[cfg_attr(feature = "serde", typetag::serde)]
 impl Setting for std::time::SystemTime{}
 /*
 impl<'a, T> Setting for std::borrow::Cow<'a, T>
