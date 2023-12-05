@@ -238,8 +238,15 @@ use types::errors::{DeepError, InvalidAccountError};
 ///
 /// They accept an extra `Vec` of `&str` that are the list of child `Accounts`
 /// you have to pass though to get to the child `Account` the function will be called.
+/// For each value in the `Vec` the value to its right is its parent. Meaning that the right most value
+/// is the a direct child of the `Account` we call the function on, and the left most is the the `Account`
+/// we will interact with.
 ///
 /// Deep functions can return [`DeepError`]'s
+///
+/// The main function is [deep](Account::deep) to get a reference to a child `Account`,
+/// [deep_mut](Account::deep_mut) exists but it can make an Account [invalid](Account#valid)
+/// so its recommend to use the `deep` version of methods instead
 ///  
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
@@ -561,8 +568,7 @@ impl Account {
     pub fn deep_change_activity(
         &mut self,
         new_active: bool,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-                                       //left is the account we rename, right is the first child of the Account we call
+        account_names: &mut Vec<&str>,
     ) -> Result<bool, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
@@ -652,8 +658,7 @@ impl Account {
     pub fn deep_rename(
         &mut self,
         new_name: &str,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-                                       //left is the account we rename, right is the first child of the Account we call
+        account_names: &mut Vec<&str>,
     ) -> Result<String, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
@@ -670,10 +675,13 @@ impl Account {
             },
         )
     }
-    /// Returns a reference to the value corresponding to the key in a child `Account`.
+    /// Returns a reference to a child `Account`.
+    ///
+    /// `deep` can be used with other methods that don't need a `&mut self` (like
+    /// [get](Account::get) or [len](Account::len)) to use those methods on child `Account`s
     ///
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
-    /// the child `Account` to run the function. [`get`](Account::get) in this case.
+    /// the child `Account` to run the function.
     ///
     /// # Errors
     ///
@@ -707,30 +715,94 @@ impl Account {
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_get("int",&mut vec!["3_2","3"]), Ok(Some(&42.stg())));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&42.stg()));
     /// ```
-    #[allow(clippy::borrowed_box)]
-    pub fn deep_get(
-        &self,
-        setting_name: &str,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-                                       //left is the account we rename, right is the first child of the Account we call
-    ) -> Result<Option<&Box<dyn Setting>>, DeepError> {
+    pub fn deep(&self, account_names: &mut Vec<&str>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
         self.account_from_name(account_to_find)
             .map_or(
                 Err(DeepError::NotFound),
-                |found_account| match found_account.deep_get(setting_name, account_names) {
+                |found_account| match found_account.deep(account_names) {
                     //recursive call
                     Err(error) => match error {
-                        DeepError::EmptyVec => Ok(found_account.get(setting_name)), //base case
-                        DeepError::NotFound => Err(error), //error, invalid function call
+                        DeepError::EmptyVec => Ok(found_account), //base case
+                        DeepError::NotFound => Err(error),        //error, invalid function call
                     },
                     Ok(value) => Ok(value),
                 },
             )
+    }
+    /// Returns a mut reference to a child `Account`.
+    ///
+    /// Consider using [`deep`](Account::deep) with methods that don't need a `&mut self`,
+    /// or the respective [deep_function](Account#deep-functions) for a specific method as
+    /// `deep_mut` can make an account [invalid])(Account#valid)
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function.
+    ///
+    /// Using `deep_mut`
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new(
+    ///                 "3_2",
+    ///                 true,
+    ///                 HashMap::from([
+    ///                     ("int".to_string(),42.stg()),
+    ///                     ("bool".to_string(),true.stg()),
+    ///                     ("char".to_string(),'c'.stg()),
+    ///                 ]),
+    ///                 Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    /// assert_eq!(account.deep_mut(&mut vec!["3_2","3"]).unwrap().insert("int", 777, ), Some(42.stg()));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
+    /// ```
+    pub fn deep_mut(&mut self, account_names: &mut Vec<&str>) -> Result<&mut Self, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            if account_names.is_empty() {
+                //this and the unreachable()! have been added due to https://github.com/rust-lang/rust/issues/21906
+                return Ok(found_account);
+            }
+            match found_account.deep_mut(account_names) {
+                //recursive call
+                Ok(value) => {
+                    Ok(value) //returning the original value from the base case
+                }
+                Err(error) => match error {
+                    DeepError::EmptyVec => {
+                        unreachable!() //Ok(found_account)
+                    } //base case
+                    DeepError::NotFound => Err(error), //error, invalid function call
+                },
+            }
+        } else {
+            Err(DeepError::NotFound)
+        }
     }
     fn account_from_name(&self, name: &str) -> Option<&Self> {
         for account in 0..self.len() {
@@ -807,14 +879,13 @@ impl Account {
     /// );
     ///
     /// assert_eq!(account.deep_insert_box("int", 777.stg(), &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep_get("int", &mut vec!["3_2","3"]), Ok(Some(&777.stg())));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
     /// ```
     pub fn deep_insert_box(
         &mut self,
         setting_name: &str,
         setting_value: Box<dyn Setting>,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-                                       //left is where we insert the value, right is the first child of the Account we call
+        account_names: &mut Vec<&str>,
     ) -> Result<Option<Box<dyn Setting>>, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
@@ -884,14 +955,13 @@ impl Account {
     /// );
     ///
     /// assert_eq!(account.deep_insert("int", 777, &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep_get("int", &mut vec!["3_2","3"]), Ok(Some(&777.stg())));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
     /// ```
     pub fn deep_insert<T: Setting>(
         &mut self,
         setting_name: &str,
         setting_value: T,
-        account_names: &mut Vec<&str>, //for each value, the value to its right is its parent.
-                                       //left is where we insert the value, right is the first child of the Account we call
+        account_names: &mut Vec<&str>,
     ) -> Result<Option<Box<dyn Setting>>, DeepError> {
         self.deep_insert_box(setting_name, setting_value.stg(), account_names)
     }
