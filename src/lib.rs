@@ -64,27 +64,14 @@
 //! ```
 //! (At the moment getting values of an account isn't user friend but it will be changed in the
 //! [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
-// clippy lints
-#![warn(clippy::cargo)]
-#![warn(clippy::complexity)]
-#![warn(clippy::correctness)]
-#![warn(clippy::pedantic)]
-#![allow(clippy::doc_markdown)]
-#![warn(clippy::nursery)]
-#![warn(clippy::perf)]
-// should to be individually added #![warn(clippy::restriction)]
-#![warn(clippy::style)]
-#![warn(clippy::suspicious)]
-//rustc lints
-#![warn(missing_docs)]
-//test warnings
-#![doc(test(attr(deny(warnings))))]
+
+#![doc(test(attr(deny(warnings))))] //no warnings in tests
 //unstable features
 #![feature(trait_upcasting)]
 use core::fmt::Debug;
 use dyn_clone::DynClone;
 use dyn_ord::DynEq;
-#[cfg(feature ="serde")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,

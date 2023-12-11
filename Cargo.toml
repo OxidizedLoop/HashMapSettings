@@ -19,5 +19,18 @@ typetag = "0.2"
 [features]
 serde = ["dep:serde"]
 
+[lints]
+clippy.cargo = "warn"
+clippy.complexity = "warn"
+clippy.correctness = "warn"
+clippy.pedantic = "warn"
+clippy.doc_markdown = "allow"
+clippy.nursery = "warn"
+clippy.perf = "warn"
+#clippy.restriction = "warn" should to be individually added 
+clippy.style = "warn"
+clippy.suspicious = "warn"
+rust.missing_docs = "warn"
+
 [unstable]
 trait_upcasting = true
