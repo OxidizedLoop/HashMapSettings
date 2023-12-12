@@ -1,4 +1,4 @@
-# HashMapSettings [![Version]][Crates.io] [![Documentation]][Docs.rs] [![Build Status]][Actions]
+# HashMapSettings [![Version]][Crates.io] [![Rust Version]][Rust 1.76] [![Documentation]][Docs.rs] [![Build Status]][Actions]
 
 [Version]: https://img.shields.io/crates/v/hashmap_settings.svg
 [Crates.io]: https://crates.io/crates/hashmap_settings
@@ -6,6 +6,8 @@
 [Docs.rs]: https://docs.rs/hashmap_settings
 [Build Status]: https://img.shields.io/github/actions/workflow/status/OxidizedLoop/HashMapSettings/rust.yml
 [Actions]: https://github.com/OxidizedLoop/HashMapSettings/actions
+[Rust Version]: https://img.shields.io/badge/rust-1.76+-lightgray.svg
+[Rust 1.76]: https://blog.rust-lang.org/2024/02/08/Rust-1.76.0.html
 
 ## **A HashMap wrapper for layered Settings of distinct types**
 

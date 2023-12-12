@@ -66,8 +66,7 @@
 //! [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
-//unstable features
-#![feature(trait_upcasting)]
+
 use core::fmt::Debug;
 use dyn_clone::DynClone;
 use dyn_ord::DynEq;
