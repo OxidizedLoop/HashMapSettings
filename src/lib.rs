@@ -35,13 +35,13 @@
 //!
 //! ```
 //! # #[allow(warnings)]
-//! use hashmap_settings::{Account,Setting,unstg,safe_unstg};
+//! use hashmap_settings::{Account,Setting};
 //! ```
 //!
 //! Basic use of an `Account`:
 //!
 //! ```rust
-//! # use hashmap_settings::{Account,unstg};
+//! # use hashmap_settings::{Account};
 //! let mut account = Account::default(); //creating a basic account
 //!
 //! //inserting values of distinct types
@@ -49,21 +49,15 @@
 //! account.insert("Grass color","green".to_string());
 //! account.insert("Today is good",true);
 //!
-//! //getting values from the account (check issue #27)
-//! let today_bool: bool = unstg(account.get("Today is good").unwrap().clone());
-//! let grass_color: String = unstg(account.get("Grass color").unwrap().clone());
-//! let trees: i32 = unstg(account.get("Number of trees").unwrap().clone());
-//!
-//! //be careful as this would panic!:
-//! //let grass: i32 = unstg(account.get("Grass Color").unwrap().clone());
-//! //there is a safe_unstg() returning a Result that can be used to prevent mistakes.
+//! //getting values from the account
+//! let today_bool: bool = account.get("Today is good").unwrap();
+//! let grass_color: String = account.get("Grass color").unwrap();
+//! let trees: i32 = account.get("Number of trees").unwrap();
 //!
 //! //example of using the values
 //! print!("It's {today_bool} that today is a wonderful day,
 //!     the grass is {grass_color} and I can see {trees} trees in the distance");
 //! ```
-//! (At the moment getting values of an account isn't user friend but it will be changed in the
-//! [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
 
@@ -79,7 +73,7 @@ use std::{
 };
 /// module containing types used internally by the crate
 pub mod types;
-use types::errors::{DeepError, InvalidAccountError};
+use types::errors::{DeepError, GetError, InvalidAccountError};
 
 /// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
 ///
@@ -701,7 +695,7 @@ impl Account {
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&42.stg()));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(42));
     /// ```
     pub fn deep(&self, account_names: &mut Vec<&str>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -763,7 +757,7 @@ impl Account {
     ///     ],
     /// );
     /// assert_eq!(account.deep_mut(&mut vec!["3_2","3"]).unwrap().insert("int", 777, ), Some(42.stg()));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(777));
     /// ```
     pub fn deep_mut(&mut self, account_names: &mut Vec<&str>) -> Result<&mut Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -865,7 +859,7 @@ impl Account {
     /// );
     ///
     /// assert_eq!(account.deep_insert_box("int", 777.stg(), &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get_box("int"), Some(&777.stg()));
     /// ```
     pub fn deep_insert_box(
         &mut self,
@@ -941,7 +935,7 @@ impl Account {
     /// );
     ///
     /// assert_eq!(account.deep_insert("int", 777, &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(&777.stg()));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(777));
     /// ```
     pub fn deep_insert<T: Setting>(
         &mut self,
@@ -1057,7 +1051,7 @@ impl Account {
     pub fn push_unchecked(&mut self, account: Self) {
         if account.active {
             for setting in account.settings.keys() {
-                self.insert_box(setting, account.get(setting).unwrap().clone());
+                self.insert_box(setting, account.get_box(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -1081,13 +1075,11 @@ impl Account {
     pub fn contains_key(&self, setting_name: &str) -> bool {
         self.settings.contains_key(setting_name)
     }
-    /// Returns a reference to the value corresponding to the key.
+    /// Returns a reference to a box of the value corresponding to the key.
     ///
-    /// The key may be any borrowed form of the map's key type, but
-    /// [`Hash`] and [`Eq`] on the borrowed form *must* match those for
-    /// the key type.
+    /// Consider using [get](Account::get) if you purely want to use the value.
     ///
-    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get()).
+    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get).
     ///
     /// # Examples
     ///
@@ -1095,13 +1087,68 @@ impl Account {
     /// use hashmap_settings::{Account,Setting};
     /// let mut account : Account = Default::default();
     /// account.insert("a small number", 42);
-    /// assert_eq!(account.get("a small number"), Some(&42.stg()));
-    /// assert_eq!(account.get("a big number"), None);
+    /// assert_eq!(account.get_box("a small number"), Some(&42.stg()));
+    /// assert_eq!(account.get_box("a big number"), None);
     /// ```
     #[must_use]
     #[allow(clippy::borrowed_box)]
-    pub fn get(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
+    pub fn get_box(&self, setting_name: &str) -> Option<&Box<dyn Setting>> {
         self.settings.get(setting_name)
+    }
+    /// Returns the value corresponding to the key.
+    ///
+    /// Internally [ok()](Result::ok) id called on [get_error](Account::get_error) to convert to [Option] from a [Result].
+    /// This means that any [GetError::WrongType] error will be converted to [None] meaning that the value can be present
+    /// in the HashMap but we won't get it in case we try to convert it to the wrong type.
+    ///
+    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account};
+    /// let mut account : Account = Default::default();
+    /// account.insert("a small number", 42);
+    /// assert_eq!(account.get::<i32>("a small number"), Some(42));
+    /// assert_eq!(account.get::<i32>("a big number"), None);
+    /// assert_eq!(account.get::<String>("a small number"), None);
+    /// ```
+    #[must_use]
+    pub fn get<T: Setting>(&self, setting_name: &str) -> Option<T> {
+        self.get_error(setting_name).ok()
+    }
+    /// Returns the value corresponding to the key.
+    ///
+    /// Consider using [get](Account::get) if you just want value
+    ///
+    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
+    /// # Errors
+    ///
+    /// This function can return [GetErrors](GetError).
+    ///
+    /// [None](GetError::None) when the value is not contained in the Account.
+    /// [WrongType][GetError::WrongType] when the value is contained, but it was been tried
+    /// to convert to the wrong type
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,types::errors::GetError};
+    /// let mut account : Account = Default::default();
+    /// account.insert("a small number", 42);
+    /// assert_eq!(account.get_error::<i32>("a small number"), Ok(42));
+    /// assert_eq!(account.get_error::<i32>("a big number"), Err(GetError::None));
+    /// assert_eq!(account.get_error::<String>("a small number"), Err(GetError::WrongType));
+    /// ```
+    pub fn get_error<T: Setting>(&self, setting_name: &str) -> Result<T, GetError> {
+        self.settings
+            .get(setting_name)
+            .map_or(Err(GetError::None), |value| {
+                match safe_unstg::<T>(value.clone()) {
+                    Ok(value) => Ok(*value),
+                    Err(_error) => Err(GetError::WrongType), //Err(GetError::WrongType(value.clone())),
+                }
+            })
     }
     /// Inserts a key-value pair into the map.
     ///
@@ -1327,7 +1374,7 @@ impl Account {
         }
         if account.active {
             for setting in account.settings.keys() {
-                self.insert_box(setting, account.get(setting).unwrap().clone());
+                self.insert_box(setting, account.get_box(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -1613,9 +1660,9 @@ mod tests {
         let mut account = Account::default();
         account.insert("bool_setting", bool_setting);
         account.insert("i32_setting", i32_setting);
-        let i32s: i32 = unstg(account.get("i32_setting").unwrap().clone());
+        let i32s: i32 = account.get("i32_setting").unwrap();
         assert_eq!(i32s, 42);
-        let stg: Box<dyn Setting> = account.get("bool_setting").unwrap().clone();
+        let stg: Box<dyn Setting> = account.get_box("bool_setting").unwrap().clone();
         assert!(unstg::<bool>(stg));
     }
     #[test]

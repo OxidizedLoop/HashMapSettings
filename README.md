@@ -29,7 +29,7 @@ hashmap_settings = "0.4"
 Add the following line to your .rs file:
 
 ```rust
-use hashmap_settings::{Account,Setting,unstg,safe_unstg};
+use hashmap_settings::{Account,Setting};
 ```
 
 In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting, but for now you can implement it by adding the following lines:
@@ -42,27 +42,22 @@ impl Setting for MyType {}
 Basic use of an `Account`:
 
 ```rust
-let mut account = Account::default(); //creating a basic account
+# use hashmap_settings::{Account};
+//! let mut account = Account::default(); //creating a basic account
 
 //inserting values of distinct types
 account.insert("Number of trees",5);
 account.insert("Grass color","green".to_string());
 account.insert("Today is good",true);
 
-//getting values from the account (check issue #27)
-let today_bool: bool = unstg(account.get("Today is good").unwrap().clone());
-let grass_color: String = unstg(account.get("Grass color").unwrap().clone());
-let trees: i32 = unstg(account.get("Number of trees").unwrap().clone());
-
-//be careful as this would panic!:
-//let grass: i32 = unstg(account.get("Grass Color").unwrap().clone());
-//there is a safe_unstg() returning a Result that can be used to prevent mistakes.
+//getting values from the account 
+let today_bool: bool = account.get("Today is good").unwrap();
+let grass_color: String = account.get("Grass color").unwrap();
+let trees: i32 = account.get("Number of trees").unwrap();
 
 //example of using the values 
 print!("It's {today_bool} that today is a wonderful day, the grass is {grass_color} and I can see {trees} trees in the distance");
 ```
-
-(At the moment getting values of an account isn't user friendly but it will be changed in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/27))
 
 ## License
 
