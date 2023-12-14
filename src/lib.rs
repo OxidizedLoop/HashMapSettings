@@ -1119,7 +1119,8 @@ impl Account {
     }
     /// Returns the value corresponding to the key.
     ///
-    /// Consider using [get](Account::get) if you just want value
+    /// Will return an [GetError] when the value isn't found, or when the value is found
+    /// but isn't of the type that it is being converted to.
     ///
     /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
     /// # Errors
