@@ -506,6 +506,9 @@ impl Account {
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
     /// the child `Account` to run the function. [`change_activity`](Account::change_activity) in this case.
     ///
+    /// Also updates the settings, contained on the updated account, in all the affected accounts such that they
+    /// contain the correct accounts.
+    ///
     /// # Errors
     ///
     /// Deep functions can return [`DeepError`]'s
@@ -550,20 +553,40 @@ impl Account {
         new_active: bool,
         account_names: &mut Vec<&str>,
     ) -> Result<bool, DeepError> {
+        self.deep_change_activity_helper(new_active, account_names)
+            .0
+    }
+    fn deep_change_activity_helper(
+        &mut self,
+        new_active: bool,
+        account_names: &mut Vec<&str>,
+    ) -> (Result<bool, DeepError>, Vec<String>) {
         let Some(account_to_find) = account_names.pop() else {
-            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+            return (Err(DeepError::EmptyVec), vec![]); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        self.mut_account_from_name(account_to_find).map_or(
-            Err(DeepError::NotFound),
-            |found_account| match found_account.deep_change_activity(new_active, account_names) {
-                //recursive call
-                Err(error) => match error {
-                    DeepError::EmptyVec => Ok(found_account.change_activity(new_active)), //base case
-                    DeepError::NotFound => Err(error), //error, invalid function call
-                },
-                Ok(value) => Ok(value),
-            },
-        )
+        match self.mut_account_from_name(account_to_find) {
+            Some(found_account) => {
+                let r_value =
+                    match found_account.deep_change_activity_helper(new_active, account_names) {
+                        //recursive call
+                        (Err(error), _) => match error {
+                            DeepError::EmptyVec => (
+                                Ok::<bool, DeepError>(found_account.change_activity(new_active)),
+                                found_account
+                                    .keys()
+                                    .map(std::borrow::ToOwned::to_owned)
+                                    .collect::<Vec<_>>(),
+                            ), //base case
+                            DeepError::NotFound => return (Err(error), vec![]), //error, invalid function call
+                        },
+                        (Ok(value), settings) => (Ok(value), settings),
+                    };
+                found_account
+                    .update_vec(&r_value.1.iter().map(std::convert::AsRef::as_ref).collect());
+                r_value
+            }
+            None => (Err(DeepError::NotFound), vec![]),
+        }
     }
     /// Takes a `&str` and updates the name of the `Account`.
     ///
@@ -995,6 +1018,25 @@ impl Account {
             if self.accounts[account].active() {
                 if let Some(value) = self.accounts[account].settings.get(setting) {
                     self.settings.insert(setting.to_string(), value.clone());
+                }
+            }
+        }
+    }
+    /// Updates a group of settings with the value its supposed to have.
+    ///
+    /// If an Account is [valid](Account#valid) this wont do anything.
+    ///
+    /// # Examples
+    /// ```
+    ///  //todo!() add example
+    /// ```
+    pub fn update_vec(&mut self, settings: &Vec<&str>) {
+        for setting in settings {
+            for account in (0..self.len()).rev() {
+                if self.accounts[account].active {
+                    if let Some(value) = self.accounts[account].settings.get(*setting) {
+                        self.settings.insert((*setting).to_string(), value.clone());
+                    }
                 }
             }
         }
