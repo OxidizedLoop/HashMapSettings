@@ -985,7 +985,7 @@ impl Account {
     /// ```
     pub fn update_setting_returns(&mut self, setting: &str) -> Option<bool> {
         for account in (0..self.len()).rev() {
-            if self.accounts[account].active() {
+            if self.accounts[account].active {
                 if let Some(value) = self.accounts[account].settings.get(setting) {
                     return Some(
                         !self
@@ -996,16 +996,16 @@ impl Account {
                 }
             }
         }
-        if self.settings.contains_key(setting) {
-            Some(false)
-        } else {
-            None
-        }
+        self.settings.remove(setting).map(|_| true)
     }
     /// Updates a setting with the value its supposed to have.
     ///
     /// This function doesn't return anything, consider using [update_setting_returns](Account::update_setting_returns)
     /// if a return value is needed.
+    ///
+    /// Use [update_vec](Account::update_vec) if you want to update multiple settings.
+    ///
+    /// Use [update_all_settings](Account::update_all_settings) if you want to update all settings.
     ///
     /// If an Account is [valid](Account#valid) this wont do anything.
     ///
@@ -1015,30 +1015,68 @@ impl Account {
     /// ```
     pub fn update_setting(&mut self, setting: &str) {
         for account in (0..self.len()).rev() {
-            if self.accounts[account].active() {
+            if self.accounts[account].active {
                 if let Some(value) = self.accounts[account].settings.get(setting) {
                     self.settings.insert(setting.to_string(), value.clone());
+                    return;
                 }
             }
         }
+        self.settings.remove(setting);
     }
-    /// Updates a group of settings with the value its supposed to have.
+    /// Updates a group of settings with the value they are supposed to have.
     ///
     /// If an Account is [valid](Account#valid) this wont do anything.
+    ///
+    /// Use [update_setting](Account::update_setting) if you want to update a single setting.
+    ///
+    /// Use [update_all_settings](Account::update_all_settings) if you want to update all settings.
     ///
     /// # Examples
     /// ```
     ///  //todo!() add example
     /// ```
     pub fn update_vec(&mut self, settings: &Vec<&str>) {
-        for setting in settings {
+        'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active {
                     if let Some(value) = self.accounts[account].settings.get(*setting) {
                         self.settings.insert((*setting).to_string(), value.clone());
+                        continue 'setting;
                     }
                 }
             }
+            self.settings.remove(*setting);
+        }
+    }
+    /// Updates all settings in the Account with the value they are supposed to have.
+    ///
+    /// If an Account is [valid](Account#valid) this wont do anything.
+    ///
+    /// Use [update_setting](Account::update_setting) if you want to update a single setting.
+    ///
+    /// Use [update_vec](Account::update_vec) if you want to update multiple but not all settings.
+    ///
+    /// # Examples
+    /// ```
+    ///  //todo!() add example
+    /// ```
+    pub fn update_all_settings(&mut self) {
+        let settings = self
+            .settings
+            .keys()
+            .map(std::borrow::ToOwned::to_owned)
+            .collect::<Vec<_>>();
+        'setting: for setting in settings {
+            for account in (0..self.len()).rev() {
+                if self.accounts[account].active {
+                    if let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
+                        self.settings.insert(setting.clone(), value.clone());
+                        continue 'setting;
+                    }
+                }
+            }
+            self.settings.remove(setting.as_str());
         }
     }
     fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Self> {
