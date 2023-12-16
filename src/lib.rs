@@ -1340,6 +1340,93 @@ impl Account {
     pub fn keys(&self) -> hash_map::Keys<'_, String, Box<dyn Setting>> {
         self.settings.keys()
     }
+    /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
+    ///
+    /// [unstg] and [safe_unstg] can be used to get the value from the box in case it's needed.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`remove()`](HashMap::remove).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account : Account = Default::default();
+    /// assert_eq!(account.insert("a small number", 1), None);
+    /// assert_eq!(account.remove("a small number"), Some(1.stg()));
+    /// assert_eq!(account.remove("a small number"), None);
+    /// ```
+    pub fn remove(&mut self, setting_to_remove: &str) -> Option<Box<(dyn Setting + 'static)>> {
+        self.settings.remove(setting_to_remove)
+    }
+    /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
+    ///
+    /// [unstg] and [safe_unstg] can be used to get the value from the box in case it's needed.
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &str to identify
+    /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
+    ///
+    /// This method is a direct call to [`HashMap`]'s [`remove()`](HashMap::remove).
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use hashmap_settings::{Account,Setting};
+    /// let mut account = Account::new(
+    ///     "Old Name",
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1", true, Default::default(), Default::default()),
+    ///         Account::new("2", true, Default::default(), Default::default()),
+    ///         Account::new("3", true, Default::default(), vec![
+    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///             Account::new(
+    ///                 "3_2",
+    ///                 true,
+    ///                 HashMap::from([
+    ///                     ("int".to_string(),42.stg()),
+    ///                     ("bool".to_string(),true.stg()),
+    ///                     ("char".to_string(),'c'.stg()),
+    ///                 ]),
+    ///                 Default::default()),
+    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.deep_remove("int",&mut vec!["3_2","3"]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get::<i32>("int"), None);
+    /// ```
+    pub fn deep_remove(
+        &mut self,
+        setting_to_remove: &str,
+        account_names: &mut Vec<&str>,
+    ) -> Result<Option<Box<(dyn Setting + 'static)>>, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        self.mut_account_from_name(account_to_find).map_or(
+            Err(DeepError::NotFound),
+            |found_account| match found_account.deep_remove(setting_to_remove, account_names) {
+                //recursive call
+                Err(error) => match error {
+                    DeepError::EmptyVec => Ok(found_account.remove(setting_to_remove)), //base case
+                    DeepError::NotFound => Err(error), //error, invalid function call
+                },
+
+                Ok(value) => {
+                    found_account.update_setting(setting_to_remove);
+                    Ok(value)
+                }
+            },
+        )
+    }
+
     /// Returns the number of elements the map can hold without reallocating.
     ///
     /// This number is a lower bound; the `HashMap<String, Box<dyn Setting>>` might be able to hold
