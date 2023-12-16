@@ -564,28 +564,29 @@ impl Account {
         let Some(account_to_find) = account_names.pop() else {
             return (Err(DeepError::EmptyVec), vec![]); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        match self.mut_account_from_name(account_to_find) {
-            Some(found_account) => {
-                let r_value =
-                    match found_account.deep_change_activity_helper(new_active, account_names) {
-                        //recursive call
-                        (Err(error), _) => match error {
-                            DeepError::EmptyVec => (
-                                Ok::<bool, DeepError>(found_account.change_activity(new_active)),
-                                found_account
-                                    .keys()
-                                    .map(std::borrow::ToOwned::to_owned)
-                                    .collect::<Vec<_>>(),
-                            ), //base case
-                            DeepError::NotFound => return (Err(error), vec![]), //error, invalid function call
-                        },
-                        (Ok(value), settings) => (Ok(value), settings),
-                    };
-                found_account
-                    .update_vec(&r_value.1.iter().map(std::convert::AsRef::as_ref).collect());
-                r_value
+        #[allow(clippy::option_if_let_else)]
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_change_activity_helper(new_active, account_names) {
+                //recursive call
+                (Ok(insert_option), settings) => {
+                    self.update_vec(&settings.iter().map(std::convert::AsRef::as_ref).collect());
+                    //after the base this will be called in all previous function calls,
+                    //updating the value in the corresponding Account.settings
+                    (Ok(insert_option), settings) //returning the original value from the base case
+                }
+                (Err(error), _) => match error {
+                    DeepError::EmptyVec => (
+                        Ok(found_account.change_activity(new_active)),
+                        found_account
+                            .keys()
+                            .map(std::borrow::ToOwned::to_owned)
+                            .collect::<Vec<_>>(),
+                    ), //base case
+                    DeepError::NotFound => (Err(error), vec![]), //error, invalid function call
+                },
             }
-            None => (Err(DeepError::NotFound), vec![]),
+        } else {
+            (Err(DeepError::NotFound), vec![])
         }
     }
     /// Takes a `&str` and updates the name of the `Account`.
@@ -1410,21 +1411,24 @@ impl Account {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
-        self.mut_account_from_name(account_to_find).map_or(
-            Err(DeepError::NotFound),
-            |found_account| match found_account.deep_remove(setting_to_remove, account_names) {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_remove(setting_to_remove, account_names) {
                 //recursive call
+                Ok(insert_option) => {
+                    self.update_setting(setting_to_remove);
+                    //after the base this will be called in all previous function calls,
+                    //updating the value in the corresponding Account.settings
+                    Ok(insert_option) //returning the original value from the base case
+                }
                 Err(error) => match error {
                     DeepError::EmptyVec => Ok(found_account.remove(setting_to_remove)), //base case
                     DeepError::NotFound => Err(error), //error, invalid function call
                 },
-
-                Ok(value) => {
-                    found_account.update_setting(setting_to_remove);
-                    Ok(value)
-                }
-            },
-        )
+            }
+        } else {
+            Err(DeepError::NotFound)
+        }
     }
 
     /// Returns the number of elements the map can hold without reallocating.
