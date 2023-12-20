@@ -43,7 +43,8 @@ Basic use of an `Account`:
 
 ```rust
 # use hashmap_settings::{Account};
-//! let mut account = Account::default(); //creating a basic account
+//creating a basic account
+let mut account: Account<i32> = Account::default(); //the <i32> is not relevant for this example 
 
 //inserting values of distinct types
 account.insert("Number of trees",5);

@@ -42,7 +42,8 @@
 //!
 //! ```rust
 //! # use hashmap_settings::{Account};
-//! let mut account = Account::default(); //creating a basic account
+//! //creating a basic account
+//! let mut account: Account<i32> = Account::default(); //the <i32> is not relevant for this example 
 //!
 //! //inserting values of distinct types
 //! account.insert("Number of trees",5);
@@ -69,6 +70,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
     collections::{hash_map, HashMap, HashSet},
+    hash::Hash,
     option::Option,
 };
 /// module containing types used internally by the crate
@@ -231,13 +233,13 @@ use types::errors::{DeepError, GetError, InvalidAccountError};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
-pub struct Account {
-    name: String,
+pub struct Account<N: Setting + Clone + Debug + Eq + Hash + Default> {
+    name: N,
     active: bool,
     settings: HashMap<String, Box<dyn Setting>>,
-    accounts: Vec<Account>,
+    accounts: Vec<Account<N>>,
 }
-impl Account {
+impl<N: Setting + Clone + Debug + Eq + Hash + Default> Account<N> {
     /// Creates a new account
     ///
     /// The is no [validity](Account#valid) check, so the account created can be an invalid account.
@@ -250,17 +252,17 @@ impl Account {
     /// ```
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
-    /// let account : Account = Account::new(
-    ///     "New Account",
+    /// let account= Account::new(
+    ///     "New Account".to_string(),
     ///     true,
     ///     HashMap::from([
     ///         ("int".to_string(),42.stg()),
     ///         ("bool".to_string(),true.stg())
     ///     ]),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
     ///
@@ -274,21 +276,21 @@ impl Account {
     /// );
     /// assert!(account.accounts() ==
     ///     &vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
     ///
     /// ```
     pub fn new(
-        name: &str,
+        name: N,
         active: bool,
         settings: HashMap<String, Box<dyn Setting>>,
         accounts: Vec<Self>,
     ) -> Self {
         Self {
-            name: name.to_string(),
+            name,
             active,
             settings,
             accounts,
@@ -307,23 +309,23 @@ impl Account {
     /// ```
     /// use hashmap_settings::Account;
     /// let account = Account::new_valid(
-    ///     "New Account",
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
     /// assert_eq!(account, Ok(Account::new(
-    ///     "New Account",
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// )));
     /// ```
@@ -334,25 +336,25 @@ impl Account {
     /// use hashmap_settings::types::errors::InvalidAccountError;
     /// use hashmap_settings::Account;
     /// let account = Account::new_valid(
-    ///     "New Account",
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("1", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
     /// assert_eq!(account, Err(InvalidAccountError::ExistingName));
     /// ```
     pub fn new_valid(
-        name: &str,
+        name: N,
         active: bool,
         settings: HashMap<String, Box<dyn Setting>>,
         accounts: Vec<Self>,
     ) -> Result<Self, InvalidAccountError> {
         let new_account = Self {
-            name: name.to_string(),
+            name,
             active,
             settings,
             accounts,
@@ -385,8 +387,8 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account : Account = Account::new(
-    ///     "New account",
+    /// let account= Account::new(
+    ///     "New account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default()
@@ -395,7 +397,7 @@ impl Account {
     /// assert_eq!(account.name(), "New account");
     /// ```
     #[must_use]
-    pub fn name(&self) -> &str {
+    pub const fn name(&self) -> &N {
         &self.name
     }
     /// Return a reference to the `HashMap`
@@ -405,8 +407,8 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let account : Account = Account::new(
-    ///     "New Account",
+    /// let account = Account::new(
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     HashMap::from([
     ///         ("int".to_string(),42.stg()),
@@ -433,22 +435,22 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account : Account = Account::new(
-    ///     "New Account",
+    /// let account = Account::new(
+    ///     0,
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new(1, true, Default::default(), Default::default()),
+    ///         Account::new(2, true, Default::default(), Default::default()),
+    ///         Account::new(3, true, Default::default(), Default::default())
     ///     ],
     /// );
     ///
     /// assert!(account.accounts() ==
     ///     &vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new(1, true, Default::default(), Default::default()),
+    ///         Account::new(2, true, Default::default(), Default::default()),
+    ///         Account::new(3, true, Default::default(), Default::default())
     ///     ],
     /// );
     ///
@@ -467,7 +469,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("New Account", true, Default::default(), Default::default());
+    /// let mut account = Account::new("New Account".to_string(), true, Default::default(), Default::default());
     ///
     /// assert!(account.active());
     /// account.change_activity(false);
@@ -484,7 +486,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new("New Account", false, Default::default(), Default::default());
+    /// let mut account = Account::new("New Account".to_string(), false, Default::default(), Default::default());
     ///
     /// assert!(!account.active());
     /// assert_eq!(account.change_activity(true), true);
@@ -518,32 +520,32 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
-    ///             Account::new("3_2", true, Default::default(), Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_change_activity(false,&mut vec!["3_2","3"]), Ok(true));
+    /// assert_eq!(account.deep_change_activity(false,&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(true));
     /// assert_eq!(account, Account::new(
-    ///     "Old Name",
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
-    ///             Account::new("3_2", false, Default::default(), Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), false, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
     ///         ])
     ///     ],
     /// ));
@@ -551,7 +553,7 @@ impl Account {
     pub fn deep_change_activity(
         &mut self,
         new_active: bool,
-        account_names: &mut Vec<&str>,
+        account_names: &mut Vec<&N>,
     ) -> Result<bool, DeepError> {
         self.deep_change_activity_helper(new_active, account_names)
             .0
@@ -559,7 +561,7 @@ impl Account {
     fn deep_change_activity_helper(
         &mut self,
         new_active: bool,
-        account_names: &mut Vec<&str>,
+        account_names: &mut Vec<&N>,
     ) -> (Result<bool, DeepError>, Vec<String>) {
         let Some(account_to_find) = account_names.pop() else {
             return (Err(DeepError::EmptyVec), vec![]); //error if the original call is empty, but this will create the base case in the recursive call
@@ -598,18 +600,18 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default()
     /// );
     /// assert_eq!(account.name(), "Old Name");
-    /// assert_eq!(account.rename("New Name"), "Old Name".to_string());
+    /// assert_eq!(account.rename("New Name".to_string()), "Old Name".to_string());
     /// assert_eq!(account.name(), "New Name");
     /// ```
-    pub fn rename(&mut self, new_name: &str) -> String {
-        let r_value = self.name.clone();
-        self.name = new_name.to_string();
+    pub fn rename(&mut self, new_name: N) -> N {
+        let r_value = self.name.clone(); //todo!(there should be a way to take the new value without cloning)
+        self.name = new_name;
         r_value
     }
     /// Takes a `&str` and updates the name of a child `Account`.
@@ -629,55 +631,45 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
-    ///             Account::new("3_2", true, Default::default(), Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_rename("Cool Name",&mut vec!["3_2","3"]), Ok("3_2".to_string()));
+    /// assert_eq!(account.deep_rename("Cool Name".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok("3_2".to_string()));
     /// assert_eq!(account, Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
-    ///             Account::new("Cool Name", true, Default::default(), Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("Cool Name".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
     ///         ])
     ///     ],
     /// ));
     /// ```
     pub fn deep_rename(
         &mut self,
-        new_name: &str,
-        account_names: &mut Vec<&str>,
-    ) -> Result<String, DeepError> {
-        let Some(account_to_find) = account_names.pop() else {
-            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
-        };
-        self.mut_account_from_name(account_to_find).map_or(
-            Err(DeepError::NotFound),
-            |found_account| match found_account.deep_rename(new_name, account_names) {
-                //recursive call
-                Err(error) => match error {
-                    DeepError::EmptyVec => Ok(found_account.rename(new_name)), //base case
-                    DeepError::NotFound => Err(error), //error, invalid function call
-                },
-                Ok(value) => Ok(value),
-            },
-        )
+        new_name: N,
+        account_names: &mut Vec<&N>,
+    ) -> Result<N, DeepError> {
+        match self.deep_mut(account_names) {
+            Ok(found_account) => Ok(found_account.rename(new_name)),
+            Err(error) => Err(error),
+        }
     }
     /// Returns a reference to a child `Account`.
     ///
@@ -697,16 +689,16 @@ impl Account {
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
     /// let account = Account::new(
-    ///     "Old Name",
+    ///     "Parent Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2",
+    ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
@@ -714,14 +706,14 @@ impl Account {
     ///                     ("char".to_string(),'c'.stg()),
     ///                 ]),
     ///                 Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(42));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get("int"), Some(42));
     /// ```
-    pub fn deep(&self, account_names: &mut Vec<&str>) -> Result<&Self, DeepError> {
+    pub fn deep(&self, account_names: &mut Vec<&N>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
@@ -759,16 +751,16 @@ impl Account {
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2",
+    ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
@@ -776,14 +768,14 @@ impl Account {
     ///                     ("char".to_string(),'c'.stg()),
     ///                 ]),
     ///                 Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
-    /// assert_eq!(account.deep_mut(&mut vec!["3_2","3"]).unwrap().insert("int", 777, ), Some(42.stg()));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(777));
+    /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().insert("int", 777, ), Some(42.stg()));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get("int"), Some(777));
     /// ```
-    pub fn deep_mut(&mut self, account_names: &mut Vec<&str>) -> Result<&mut Self, DeepError> {
+    pub fn deep_mut(&mut self, account_names: &mut Vec<&N>) -> Result<&mut Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
@@ -808,7 +800,7 @@ impl Account {
             Err(DeepError::NotFound)
         }
     }
-    fn account_from_name(&self, name: &str) -> Option<&Self> {
+    fn account_from_name(&self, name: &N) -> Option<&Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&self.accounts[account]);
@@ -822,14 +814,14 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account : Account = Account::new(
-    ///     "New Account",
+    /// let account = Account::new(
+    ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), Default::default())
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
     ///
@@ -837,7 +829,7 @@ impl Account {
     ///
     /// ```
     #[must_use]
-    pub fn accounts_names(&self) -> Vec<&str> {
+    pub fn accounts_names(&self) -> Vec<&N> {
         self.accounts.iter().map(Self::name).collect()
     }
     /// Inserts a key-value pair into the map of a child `Account`.
@@ -860,16 +852,16 @@ impl Account {
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2",
+    ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
@@ -877,19 +869,19 @@ impl Account {
     ///                     ("char".to_string(),'c'.stg()),
     ///                 ]),
     ///                 Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_insert_box("int", 777.stg(), &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get_box("int"), Some(&777.stg()));
+    /// assert_eq!(account.deep_insert_box("int", 777.stg(), &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get_box("int"), Some(&777.stg()));
     /// ```
     pub fn deep_insert_box(
         &mut self,
         setting_name: &str,
         setting_value: Box<dyn Setting>,
-        account_names: &mut Vec<&str>,
+        account_names: &mut Vec<&N>,
     ) -> Result<Option<Box<dyn Setting>>, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
@@ -936,16 +928,16 @@ impl Account {
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2",
+    ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
@@ -953,19 +945,19 @@ impl Account {
     ///                     ("char".to_string(),'c'.stg()),
     ///                 ]),
     ///                 Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_insert("int", 777, &mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get("int"), Some(777));
+    /// assert_eq!(account.deep_insert("int", 777, &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get("int"), Some(777));
     /// ```
-    pub fn deep_insert<T: Setting>(
+    pub fn deep_insert<S: Setting>(
         &mut self,
         setting_name: &str,
-        setting_value: T,
-        account_names: &mut Vec<&str>,
+        setting_value: S,
+        account_names: &mut Vec<&N>,
     ) -> Result<Option<Box<dyn Setting>>, DeepError> {
         self.deep_insert_box(setting_name, setting_value.stg(), account_names)
     }
@@ -1080,7 +1072,7 @@ impl Account {
             self.settings.remove(setting.as_str());
         }
     }
-    fn mut_account_from_name(&mut self, name: &str) -> Option<&mut Self> {
+    fn mut_account_from_name(&mut self, name: &N) -> Option<&mut Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
                 return Some(&mut self.accounts[account]);
@@ -1106,25 +1098,25 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new(
+    /// let mut account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("2", Default::default(), Default::default(), Default::default())
+    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(2, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
-    /// account.push_unchecked(Account::new("3", Default::default(), Default::default(), Default::default()));
+    /// account.push_unchecked(Account::new(3, Default::default(), Default::default(), Default::default()));
     /// assert!(account ==
     ///     Account::new(
     ///         Default::default(),
     ///         Default::default(),
     ///         Default::default(),
     ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(3, Default::default(), Default::default(), Default::default())
     ///         ],
     ///     )
     /// )
@@ -1147,7 +1139,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.contains_key("a small number"), true);
     /// assert_eq!(account.contains_key("a big number"), false);
@@ -1166,7 +1158,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.get_box("a small number"), Some(&42.stg()));
     /// assert_eq!(account.get_box("a big number"), None);
@@ -1188,7 +1180,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.get::<i32>("a small number"), Some(42));
     /// assert_eq!(account.get::<i32>("a big number"), None);
@@ -1216,7 +1208,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,types::errors::GetError};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.get_error::<i32>("a small number"), Ok(42));
     /// assert_eq!(account.get_error::<i32>("a big number"), Err(GetError::None));
@@ -1251,7 +1243,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
     /// assert_eq!(account.settings().is_empty(), false);
     ///
@@ -1285,7 +1277,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// assert_eq!(account.insert_box("a small number", 1.stg()), None);
     /// assert_eq!(account.settings().is_empty(), false);
     ///
@@ -1317,7 +1309,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account,Setting};
     /// use std::collections::HashMap;
-    /// let account: Account = Account::new(
+    /// let account = Account::<i32>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     HashMap::from([
@@ -1351,7 +1343,7 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,Setting};
-    /// let mut account : Account = Default::default();
+    /// let mut account: Account<i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
     /// assert_eq!(account.remove("a small number"), Some(1.stg()));
     /// assert_eq!(account.remove("a small number"), None);
@@ -1378,16 +1370,16 @@ impl Account {
     /// use std::collections::HashMap;
     /// use hashmap_settings::{Account,Setting};
     /// let mut account = Account::new(
-    ///     "Old Name",
+    ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", true, Default::default(), Default::default()),
-    ///         Account::new("2", true, Default::default(), Default::default()),
-    ///         Account::new("3", true, Default::default(), vec![
-    ///             Account::new("3_1", true, Default::default(), Default::default()),
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
     ///             Account::new(
-    ///                 "3_2",
+    ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
     ///                     ("int".to_string(),42.stg()),
@@ -1395,18 +1387,18 @@ impl Account {
     ///                     ("char".to_string(),'c'.stg()),
     ///                 ]),
     ///                 Default::default()),
-    ///             Account::new("3_3", true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_remove("int",&mut vec!["3_2","3"]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec!["3_2","3"]).unwrap().get::<i32>("int"), None);
+    /// assert_eq!(account.deep_remove("int",&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get::<i32>("int"), None);
     /// ```
     pub fn deep_remove(
         &mut self,
         setting_to_remove: &str,
-        account_names: &mut Vec<&str>,
+        account_names: &mut Vec<&N>,
     ) -> Result<Option<Box<(dyn Setting + 'static)>>, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
@@ -1443,7 +1435,7 @@ impl Account {
     /// ```
     /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let account : Account = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
+    /// let account: Account<i32> = Account::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     #[must_use]
@@ -1464,9 +1456,9 @@ impl Account {
     ///         Default::default(),
     ///         Default::default(),
     ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(3, Default::default(), Default::default(), Default::default())
     ///         ],
     ///     );
     /// assert_eq!(account.len(), 3);
@@ -1483,10 +1475,10 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::default();
+    /// let mut account = Account::<i32>::default();
     /// assert!(account.is_empty());
     ///
-    /// account.push(Account::default());
+    /// account.push(Account::<i32>::default());
     /// assert!(!account.is_empty());
     /// ```
     #[must_use]
@@ -1510,29 +1502,29 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account,types::errors::InvalidAccountError};
-    /// let mut account : Account = Account::new(
+    /// let mut account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("2", Default::default(), Default::default(), Default::default())
+    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(2, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
-    /// account.push(Account::new("3", Default::default(), Default::default(), Default::default()));
+    /// account.push(Account::new(3, Default::default(), Default::default(), Default::default()));
     /// assert!(account ==
     ///     Account::new(
     ///         Default::default(),
     ///         Default::default(),
     ///         Default::default(),
     ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("3", Default::default(), Default::default(), Default::default())
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(3, Default::default(), Default::default(), Default::default())
     ///         ],
     ///     )
     /// );
-    /// assert!(account.push(Account::new("3", Default::default(), Default::default(), Default::default()))
+    /// assert!(account.push(Account::new(3, Default::default(), Default::default(), Default::default()))
     ///     == Some(InvalidAccountError::ExistingName));
     /// ```
     pub fn push(&mut self, account: Self) -> Option<InvalidAccountError> {
@@ -1563,14 +1555,14 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new(
+    /// let mut account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(3, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
     /// account.pop_keep();
@@ -1580,8 +1572,8 @@ impl Account {
     ///         Default::default(),
     ///         Default::default(),
     ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default())
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default())
     ///         ],
     ///     )
     /// )
@@ -1601,14 +1593,14 @@ impl Account {
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account : Account = Account::new(
+    /// let mut account = Account::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
     ///     vec![
-    ///         Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("2", Default::default(), Default::default(), Default::default()),
-    ///         Account::new("3", Default::default(), Default::default(), Default::default())
+    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(3, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
     /// account.pop();
@@ -1618,8 +1610,8 @@ impl Account {
     ///         Default::default(),
     ///         Default::default(),
     ///         vec![
-    ///             Account::new("1", Default::default(), Default::default(), Default::default()),
-    ///             Account::new("2", Default::default(), Default::default(), Default::default())
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default())
     ///         ],
     ///     )
     /// )
@@ -1662,18 +1654,18 @@ impl Account {
         }
     */
 }
-impl Default for Account {
+impl<N: Setting + Clone + Debug + Eq + Hash + Default> Default for Account<N> {
     fn default() -> Self {
         Self {
-            name: String::default(),
+            name: N::default(),
+            active: true,
             settings: HashMap::default(),
             accounts: Vec::default(),
-            active: true,
         }
     }
 }
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Account {}
+impl<N: Setting + Clone + Debug + Eq + Hash + Default> Setting for Account<N> {}
 
 /// Required trait for any type that that will be used as a setting
 ///
@@ -1829,7 +1821,7 @@ mod tests {
     fn account_test() {
         let bool_setting = true;
         let i32_setting = 42;
-        let mut account = Account::default();
+        let mut account: Account<String> = Account::default();
         account.insert("bool_setting", bool_setting);
         account.insert("i32_setting", i32_setting);
         let i32s: i32 = account.get("i32_setting").unwrap();
@@ -1844,7 +1836,7 @@ mod tests {
     #[test]
     fn account_new() {
         let mut account1 = Account::new(
-            "name",
+            "name".to_string(),
             Default::default(),
             HashMap::default(),
             Vec::default(),
@@ -1852,7 +1844,7 @@ mod tests {
         account1.insert("answer to everything", 42);
         account1.insert("true is true", true);
         let account2 = Account::new(
-            "name",
+            "name".to_string(),
             Default::default(),
             [
                 ("answer to everything".to_string(), 42.stg()),
