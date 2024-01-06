@@ -39,7 +39,7 @@ In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you wi
 impl Setting for MyType {}
 ```
 
-Basic use of an `Account`:
+Basic use of an `Account` without layers:
 
 ```rust
 # use hashmap_settings::{Account};
