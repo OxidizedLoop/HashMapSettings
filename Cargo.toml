@@ -1,6 +1,6 @@
 [package]
 name = "hashmap_settings"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["OxidizedLoop"]
 edition = "2021"
 description = "HashMap wrapper for layered Settings"

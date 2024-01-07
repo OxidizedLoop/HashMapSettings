@@ -42,7 +42,8 @@
 //!
 //! ```rust
 //! # use hashmap_settings::{Account};
-//! let mut account = Account::default(); //creating a basic account
+//! //creating a basic account
+//! let mut account = Account::default();
 //!
 //! //inserting values of distinct types
 //! account.insert("Number of trees",5);
