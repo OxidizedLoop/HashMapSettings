@@ -1,4 +1,4 @@
-# HashMapSettings [![Version]][Crates.io] [![Documentation]][Docs.rs] [![Build Status]][Actions]
+# HashMapSettings [![Version]][Crates.io] [![Rust Version]][Rust 1.76] [![Documentation]][Docs.rs] [![Build Status]][Actions]
 
 [Version]: https://img.shields.io/crates/v/hashmap_settings.svg
 [Crates.io]: https://crates.io/crates/hashmap_settings
@@ -6,6 +6,8 @@
 [Docs.rs]: https://docs.rs/hashmap_settings
 [Build Status]: https://img.shields.io/github/actions/workflow/status/OxidizedLoop/HashMapSettings/rust.yml
 [Actions]: https://github.com/OxidizedLoop/HashMapSettings/actions
+[Rust Version]: https://img.shields.io/badge/rust-1.76+-lightgray.svg
+[Rust 1.76]: https://blog.rust-lang.org/2024/02/08/Rust-1.76.0.html
 
 ## **A HashMap wrapper for layered Settings of distinct types**
 
@@ -21,7 +23,7 @@ Add the following line to your Cargo.toml:
 
 ```toml
 [dependencies]
-hashmap_settings = "0.4"
+hashmap_settings = "0.5"
 ```
 
 Add the following line to your .rs file:
@@ -41,7 +43,7 @@ Basic use of an `Account`:
 
 ```rust
 //creating a basic account
-let mut account = Account::default();
+let mut account: Account<i32> = Account::default(); //the <i32> is not relevant for this example 
 
 //inserting values of distinct types
 account.insert("Number of trees",5);
