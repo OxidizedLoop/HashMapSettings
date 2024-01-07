@@ -38,7 +38,7 @@
 //! use hashmap_settings::{Account,Setting};
 //! ```
 //!
-//! Basic use of an `Account`:
+//! Basic use of an `Account` without layers:
 //!
 //! ```rust
 //! # use hashmap_settings::{Account};
