@@ -43,7 +43,7 @@ Basic use of an `Account`:
 
 ```rust
 //creating a basic account
-let mut account: Account<i32> = Account::default(); //the <i32> is not relevant for this example 
+let mut account = Account::<(),&str>::default();
 
 //inserting values of distinct types
 account.insert("Number of trees",5);
