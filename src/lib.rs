@@ -35,12 +35,13 @@
 //!
 //! ```
 //! # #[allow(warnings)]
-//! use hashmap_settings::{Account,Setting};
+//! use hashmap_settings::{Account};
 //! ```
 //!
 //! Basic use of an `Account` without layers:
 //!
 //! ```rust
+//! /*
 //! # use hashmap_settings::{Account};
 //! //creating a basic account
 //! let mut account = Account::<(),&str>::default();
@@ -58,6 +59,7 @@
 //! //example of using the values
 //! print!("It's {today_bool} that today is a wonderful day,
 //!     the grass is {grass_color} and I can see {trees} trees in the distance");
+//! */
 //! ```
 
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
@@ -77,7 +79,7 @@ use std::{
 pub mod types;
 use types::errors::{DeepError, GetError, InvalidAccountError};
 
-/// A [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>> with an associated name.
+/// A [`HashMap`] with an associated name permitting layered settings.
 ///
 /// An Account is a Wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
 ///
@@ -233,13 +235,22 @@ use types::errors::{DeepError, GetError, InvalidAccountError};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
-pub struct Account<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Hash + 'static> {
+pub struct Account<
+    N: Setting + Clone + Debug + Eq + Hash + Default,
+    K: Clone + Debug + Eq + Hash + 'static,
+    V: Clone + Debug + PartialEq + 'static,
+> {
     name: N,
     active: bool,
-    settings: HashMap<K, Box<dyn Setting>>,
-    accounts: Vec<Account<N,K>>,
+    hashmap: HashMap<K, V>,
+    accounts: Vec<Account<N, K, V>>,
 }
-impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Hash + 'static> Account<N,K> {
+impl<
+        N: Setting + Clone + Debug + Eq + Hash + Default,
+        K: Clone + Debug + Eq + Hash + 'static,
+        V: Clone + Debug + PartialEq + 'static,
+    > Account<N, K, V>
+{
     /// Creates a new account
     ///
     /// The is no [validity](Account#valid) check, so the account created can be an invalid account.
@@ -251,13 +262,14 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// # Example
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
+    /// use hashmap_settings::{Account};
     /// let account = Account::new(
     ///     "New Account".to_string(),
     ///     true,
     ///     HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
+    ///         ("answer".to_string(),42),
+    ///         ("zero".to_string(),0),
+    ///         ("big_number".to_string(),10000),
     ///     ]),
     ///     vec![
     ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
@@ -268,10 +280,11 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// assert_eq!(account.name(), "New Account");
     /// assert!(account.active());
-    /// assert!(account.settings() ==
+    /// assert!(account.hashmap() ==
     ///     &HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
+    ///         ("answer".to_string(),42),
+    ///         ("zero".to_string(),0),
+    ///         ("big_number".to_string(),10000)
     ///     ])
     /// );
     /// assert!(account.accounts() ==
@@ -283,16 +296,11 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// );
     ///
     /// ```
-    pub fn new(
-        name: N,
-        active: bool,
-        settings: HashMap<K, Box<dyn Setting>>,
-        accounts: Vec<Self>,
-    ) -> Self {
+    pub fn new(name: N, active: bool, settings: HashMap<K, V>, accounts: Vec<Self>) -> Self {
         Self {
             name,
             active,
-            settings,
+            hashmap: settings,
             accounts,
         }
     }
@@ -308,7 +316,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::Account;
-    /// let account = Account::<String,()>::new_valid(
+    /// let account = Account::<String,(),()>::new_valid(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -318,7 +326,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
     /// );
-    /// assert_eq!(account, Ok(Account::<String,()>::new(
+    /// assert_eq!(account, Ok(Account::<String,(),()>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -335,7 +343,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// ```
     /// use hashmap_settings::types::errors::InvalidAccountError;
     /// use hashmap_settings::Account;
-    /// let account = Account::<String,()>::new_valid(
+    /// let account = Account::<String,(),()>::new_valid(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -350,13 +358,13 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     pub fn new_valid(
         name: N,
         active: bool,
-        settings: HashMap<K, Box<dyn Setting>>,
+        settings: HashMap<K, V>,
         accounts: Vec<Self>,
     ) -> Result<Self, InvalidAccountError> {
         let new_account = Self {
             name,
             active,
-            settings,
+            hashmap: settings,
             accounts,
         };
         new_account
@@ -387,7 +395,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account = Account::<String,()>::new(
+    /// let account = Account::<String,(),()>::new(
     ///     "New account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -405,29 +413,31 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Setting};
+    /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let account = Account::<String,String>::new(
+    /// let account = Account::<String,String,i32>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
+    ///         ("answer".to_string(),42),
+    ///         ("zero".to_string(),0),
+    ///         ("big_number".to_string(),10000),
     ///     ]),
     ///     Default::default(),
     /// );
     ///
-    /// assert!(account.settings() ==
+    /// assert!(account.hashmap() ==
     ///     &HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg())
+    ///         ("answer".to_string(),42),
+    ///         ("zero".to_string(),0),
+    ///         ("big_number".to_string(),10000),
     ///     ])
     /// );
     ///
     /// ```
     #[must_use]
-    pub fn settings(&self) -> &HashMap<K, Box<dyn Setting>> {
-        &self.settings
+    pub const fn hashmap(&self) -> &HashMap<K, V> {
+        &self.hashmap
     }
     /// Return a reference to the `Vec` of child `Accounts`
     ///
@@ -435,7 +445,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account = Account::<i32,()>::new(
+    /// let account = Account::<i32,(),()>::new(
     ///     0,
     ///     Default::default(),
     ///     Default::default(),
@@ -469,7 +479,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),()>::new(Default::default(), true, Default::default(), Default::default());
+    /// let mut account = Account::<(),(),()>::new(Default::default(), true, Default::default(), Default::default());
     ///
     /// assert!(account.active());
     /// account.change_activity(false);
@@ -486,7 +496,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),()>::new(Default::default(), false, Default::default(), Default::default());
+    /// let mut account = Account::<(),(),()>::new(Default::default(), false, Default::default(), Default::default());
     ///
     /// assert!(!account.active());
     /// assert_eq!(account.change_activity(true), true);
@@ -519,7 +529,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<String,()>::new(
+    /// let mut account = Account::<String,(),()>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -599,7 +609,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<String,()>::new(
+    /// let mut account = Account::<String,(),()>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -630,7 +640,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<String,()>::new(
+    /// let mut account = Account::<String,(),()>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -687,8 +697,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
-    /// let account = Account::<String,String>::new(
+    /// use hashmap_settings::{Account};
+    /// let account = Account::<String,String,i32>::new(
     ///     "Parent Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -701,9 +711,9 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
-    ///                     ("int".to_string(),42.stg()),
-    ///                     ("bool".to_string(),true.stg()),
-    ///                     ("char".to_string(),'c'.stg()),
+    ///                     ("answer".to_string(),42),
+    ///                     ("zero".to_string(),0),
+    ///                     ("big_number".to_string(),10000),
     ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
@@ -711,7 +721,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"int".to_string()), Some(42));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&42));
     /// ```
     pub fn deep(&self, account_names: &mut Vec<&N>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -749,8 +759,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account = Account::<String,String>::new(
+    /// use hashmap_settings::{Account};
+    /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -763,17 +773,17 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
-    ///                     ("int".to_string(),42.stg()),
-    ///                     ("bool".to_string(),true.stg()),
-    ///                     ("char".to_string(),'c'.stg()),
+    ///                     ("answer".to_string(),42),
+    ///                     ("zero".to_string(),0),
+    ///                     ("big_number".to_string(),10000),
     ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
     ///         ])
     ///     ],
     /// );
-    /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().insert("int".to_string(), 777), Some(42.stg()));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"int".to_string()), Some(777));
+    /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().insert("answer".to_string(), 777), Some(42));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&777));
     /// ```
     pub fn deep_mut(&mut self, account_names: &mut Vec<&N>) -> Result<&mut Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -814,7 +824,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let account = Account::<String,()>::new(
+    /// let account = Account::<String,(),()>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -834,7 +844,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     }
     /// Inserts a key-value pair into the map of a child `Account`.
     ///
-    /// Use [deep_insert](Account::deep_insert) to insert a `T` instead of a `Box<dyn Setting>`.
+    /// This method is a call to [deep_insert_box](Account::deep_insert_box) after T is turned into a V.
     ///
     /// This will updated the [settings](Account#settings) of all necessary Accounts
     /// so that the parent Account remains [valid](Account#valid)
@@ -850,8 +860,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account = Account::<String,String>::new(
+    /// use hashmap_settings::{Account};
+    /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -864,9 +874,9 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
-    ///                     ("int".to_string(),42.stg()),
-    ///                     ("bool".to_string(),true.stg()),
-    ///                     ("char".to_string(),'c'.stg()),
+    ///                     ("answer".to_string(),42),
+    ///                     ("zero".to_string(),0),
+    ///                     ("big_number".to_string(),10000),
     ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
@@ -874,22 +884,21 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_insert_box(&"int".to_string(), 777.stg(), &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get_box(&"int".to_string()), Some(&777.stg()));
+    /// assert_eq!(account.deep_insert(&"answer".to_string(), 777, &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&777));
     /// ```
-    pub fn deep_insert_box(
+    pub fn deep_insert(
         &mut self,
         setting_name: &K,
-        setting_value: Box<dyn Setting>,
+        setting_value: V,
         account_names: &mut Vec<&N>,
-    ) -> Result<Option<Box<dyn Setting>>, DeepError> {
+    ) -> Result<Option<V>, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
         #[allow(clippy::option_if_let_else)]
         if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_insert_box(setting_name, setting_value.clone(), account_names)
-            {
+            match found_account.deep_insert(setting_name, setting_value.clone(), account_names) {
                 //recursive call
                 Ok(insert_option) => {
                     self.update_setting(setting_name);
@@ -899,7 +908,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
                 }
                 Err(error) => match error {
                     DeepError::EmptyVec => {
-                        Ok(found_account.insert_box(setting_name.to_owned(), setting_value))
+                        Ok(found_account.insert(setting_name.to_owned(), setting_value))
                     } //base case
                     DeepError::NotFound => Err(error), //error, invalid function call
                 },
@@ -907,59 +916,6 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
         } else {
             Err(DeepError::NotFound)
         }
-    }
-    /// Inserts a key-value pair into the map of a child `Account`.
-    ///
-    /// This method is a call to [deep_insert_box](Account::deep_insert_box) after T is turned into a Box<dyn Setting>.
-    ///
-    /// This will updated the [settings](Account#settings) of all necessary Accounts
-    /// so that the parent Account remains [valid](Account#valid)
-    ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
-    /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
-    ///
-    /// # Errors
-    ///
-    /// Deep functions can return [`DeepError`]'s
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account = Account::<String,String>::new(
-    ///     "Old Name".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("3".to_string(), true, Default::default(), vec![
-    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
-    ///             Account::new(
-    ///                 "3_2".to_string(),
-    ///                 true,
-    ///                 HashMap::from([
-    ///                     ("int".to_string(),42.stg()),
-    ///                     ("bool".to_string(),true.stg()),
-    ///                     ("char".to_string(),'c'.stg()),
-    ///                 ]),
-    ///                 Default::default()),
-    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
-    ///         ])
-    ///     ],
-    /// );
-    ///
-    /// assert_eq!(account.deep_insert(&"int".to_string(), 777, &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"int".to_string()), Some(777));
-    /// ```
-    pub fn deep_insert<S: Setting>(
-        &mut self,
-        setting_name: &K,
-        setting_value: S,
-        account_names: &mut Vec<&N>,
-    ) -> Result<Option<Box<dyn Setting>>, DeepError> {
-        self.deep_insert_box(setting_name, setting_value.stg(), account_names)
     }
     /// Updates a setting with the value its supposed to have.
     ///
@@ -979,17 +935,17 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].settings.get(setting) {
+                if let Some(value) = self.accounts[account].hashmap.get(setting) {
                     return Some(
                         !self
-                            .settings
+                            .hashmap
                             .insert(setting.to_owned(), value.clone())
                             .map_or(false, |x| &x == value),
                     );
                 }
             }
         }
-        self.settings.remove(setting).map(|_| true)
+        self.hashmap.remove(setting).map(|_| true)
     }
     /// Updates a setting with the value its supposed to have.
     ///
@@ -1009,13 +965,13 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     pub fn update_setting(&mut self, setting: &K) {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].settings.get(setting) {
-                    self.settings.insert(setting.to_owned(), value.clone());
+                if let Some(value) = self.accounts[account].hashmap.get(setting) {
+                    self.hashmap.insert(setting.to_owned(), value.clone());
                     return;
                 }
             }
         }
-        self.settings.remove(setting);
+        self.hashmap.remove(setting);
     }
     /// Updates a group of settings with the value they are supposed to have.
     ///
@@ -1033,13 +989,13 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].settings.get(*setting) {
-                        self.settings.insert((*setting).to_owned(), value.clone());
+                    if let Some(value) = self.accounts[account].hashmap.get(*setting) {
+                        self.hashmap.insert((*setting).to_owned(), value.clone());
                         continue 'setting;
                     }
                 }
             }
-            self.settings.remove(*setting);
+            self.hashmap.remove(*setting);
         }
     }
     /// Updates all settings in the Account with the value they are supposed to have.
@@ -1056,20 +1012,20 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// ```
     pub fn update_all_settings(&mut self) {
         let settings = self
-            .settings
+            .hashmap
             .keys()
             .map(std::borrow::ToOwned::to_owned)
             .collect::<Vec<_>>();
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
-                        self.settings.insert(setting.clone(), value.clone());
+                    if let Some(value) = self.accounts[account].hashmap.get(&setting.clone()) {
+                        self.hashmap.insert(setting.clone(), value.clone());
                         continue 'setting;
                     }
                 }
             }
-            self.settings.remove(&setting);
+            self.hashmap.remove(&setting);
         }
     }
     fn mut_account_from_name(&mut self, name: &N) -> Option<&mut Self> {
@@ -1098,7 +1054,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<i32,()>::new(
+    /// let mut account = Account::<i32,(),()>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
@@ -1123,8 +1079,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// ```
     pub fn push_unchecked(&mut self, account: Self) {
         if account.active {
-            for setting in account.settings.keys() {
-                self.insert_box(setting.to_owned(), account.get_box(setting).unwrap().clone());
+            for setting in account.hashmap.keys() {
+                self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -1139,34 +1095,14 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account: Account<(),&str> = Default::default();
+    /// let mut account: Account<(),&str,i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.contains_key(&"a small number"), true);
     /// assert_eq!(account.contains_key(&"a big number"), false);
     /// ```
     #[must_use]
     pub fn contains_key(&self, setting_name: &K) -> bool {
-        self.settings.contains_key(setting_name)
-    }
-    /// Returns a reference to a box of the value corresponding to the key.
-    ///
-    /// Consider using [get](Account::get) if you purely want to use the value.
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account: Account<(),&str> = Default::default();
-    /// account.insert("a small number", 42);
-    /// assert_eq!(account.get_box(&"a small number"), Some(&42.stg()));
-    /// assert_eq!(account.get_box(&"a big number"), None);
-    /// ```
-    #[must_use]
-    #[allow(clippy::borrowed_box)]
-    pub fn get_box(&self, setting_name: &K) -> Option<&Box<dyn Setting>> {
-        self.settings.get(setting_name)
+        self.hashmap.contains_key(setting_name)
     }
     /// Returns the value corresponding to the key.
     ///
@@ -1180,50 +1116,17 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account: Account<(),&str> = Default::default();
+    /// let mut account: Account<(),&str,i32> = Default::default();
     /// account.insert("a small number", 42);
-    /// assert_eq!(account.get::<i32>(&"a small number"), Some(42));
-    /// assert_eq!(account.get::<i32>(&"a big number"), None);
-    /// assert_eq!(account.get::<String>(&"a small number"), None);
+    /// assert_eq!(account.get(&"a small number"), Some(&42));
+    /// assert_eq!(account.get(&"a big number"), None);
     /// ```
     #[must_use]
-    pub fn get<T: Setting>(&self, setting_name: &K) -> Option<T> {
-        self.get_error(setting_name).ok()
+    #[allow(clippy::borrowed_box)]
+    pub fn get(&self, setting_name: &K) -> Option<&V> {
+        self.hashmap.get(setting_name)
     }
-    /// Returns the value corresponding to the key.
-    ///
-    /// Will return an [GetError] when the value isn't found, or when the value is found
-    /// but isn't of the type that it is being converted to.
-    ///
-    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
-    /// # Errors
-    ///
-    /// This function can return [GetErrors](GetError).
-    ///
-    /// [None](GetError::None) when the value is not contained in the Account.
-    /// [WrongType][GetError::WrongType] when the value is contained, but it was been tried
-    /// to convert to the wrong type
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,types::errors::GetError};
-    /// let mut account: Account<(),&str> = Default::default();
-    /// account.insert("a small number", 42);
-    /// assert_eq!(account.get_error::<i32>(&"a small number"), Ok(42));
-    /// assert_eq!(account.get_error::<i32>(&"a big number"), Err(GetError::None));
-    /// assert_eq!(account.get_error::<String>(&"a small number"), Err(GetError::WrongType));
-    /// ```
-    pub fn get_error<T: Setting>(&self, setting_name: &K) -> Result<T, GetError> {
-        self.settings
-            .get(setting_name)
-            .map_or(Err(GetError::None), |value| {
-                match safe_unstg::<T>(value.clone()) {
-                    Ok(value) => Ok(*value),
-                    Err(_error) => Err(GetError::WrongType), //Err(GetError::WrongType(value.clone())),
-                }
-            })
-    }
+
     /// Inserts a key-value pair into the map.
     ///
     /// This method is a call to [insert_box](Account::insert_box) after T is turned into a Box<dyn Setting>.
@@ -1242,59 +1145,18 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account: Account<(),&str> = Default::default();
+    /// use hashmap_settings::{Account};
+    /// let mut account: Account<(),&str,i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
-    /// assert_eq!(account.settings().is_empty(), false);
+    /// assert_eq!(account.hashmap().is_empty(), false);
     ///
     /// account.insert("a small number", 2);
-    /// assert_eq!(account.insert("a small number", 3), Some(2.stg()));
-    /// assert!(account.settings()[&"a small number"] == 3.stg());
+    /// assert_eq!(account.insert("a small number", 3), Some(2));
+    /// assert!(account.hashmap()[&"a small number"] == 3);
     /// ```
-    pub fn insert<T: Setting>(
-        &mut self,
-        setting_name: K,
-        setting_value: T,
-    ) -> Option<Box<dyn Setting>> {
-        self.insert_box(setting_name, setting_value.stg())
-    }
-    /// Inserts a key-value pair into the map.
-    ///
-    /// Use [insert](Account::insert) to insert a `T` instead of a `Box<dyn Setting>`.
-    ///
-    /// If the map did not have this key present, None is returned.
-    ///
-    /// If the map did have this key present, the value is updated, and the old
-    /// value is returned. The key is not updated, though; this matters for
-    /// types that can be `==` without being identical. See the [module-level
-    /// documentation] for more.
-    ///
-    /// [module-level documentation]: std::collections#insert-and-complex-keys
-    ///
-    /// This method is a direct call to [`HashMap`]'s [`insert()`](HashMap::insert()).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account: Account<(),&str> = Default::default();
-    /// assert_eq!(account.insert_box("a small number", 1.stg()), None);
-    /// assert_eq!(account.settings().is_empty(), false);
-    ///
-    /// account.insert_box("a small number", 2.stg());
-    /// assert_eq!(account.insert_box("a small number", 3.stg()), Some(2.stg()));
-    /// assert!(account.settings()[&"a small number"] == 3.stg());
-    /// ```
-    pub fn insert_box(
-        &mut self,
-        setting_name: K,
-        setting_value: Box<dyn Setting>,
-    ) -> Option<Box<dyn Setting>> {
+    pub fn insert(&mut self, setting_name: K, setting_value: V) -> Option<V> {
         let mut return_value = None;
-        if let Some(value) = self
-            .settings
-            .insert(setting_name, setting_value)
-        {
+        if let Some(value) = self.hashmap.insert(setting_name, setting_value) {
             return_value = Some(value);
         }
         return_value
@@ -1307,15 +1169,15 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Setting};
+    /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let account = Account::<(),String>::new(
+    /// let account = Account::<(),String,i32>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     HashMap::from([
-    ///         ("int".to_string(),42.stg()),
-    ///         ("bool".to_string(),true.stg()),
-    ///         ("char".to_string(),'c'.stg()),
+    ///         ("answer".to_string(),42),
+    ///         ("zero".to_string(),0),
+    ///         ("big_number".to_string(),10000),
     ///     ]),
     ///     Default::default(),
     /// );
@@ -1330,8 +1192,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// In the current implementation, iterating over keys takes O(capacity) time
     /// instead of O(len) because it internally visits empty buckets too.
     #[must_use]
-    pub fn keys(&self) -> hash_map::Keys<'_, K, Box<dyn Setting>> {
-        self.settings.keys()
+    pub fn keys(&self) -> hash_map::Keys<'_, K, V> {
+        self.hashmap.keys()
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
@@ -1342,14 +1204,14 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account: Account<(),&str> = Default::default();
+    /// use hashmap_settings::{Account};
+    /// let mut account: Account<(),&str,i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
-    /// assert_eq!(account.remove(&"a small number"), Some(1.stg()));
+    /// assert_eq!(account.remove(&"a small number"), Some(1));
     /// assert_eq!(account.remove(&"a small number"), None);
     /// ```
-    pub fn remove(&mut self, setting_to_remove: &K) -> Option<Box<(dyn Setting + 'static)>> {
-        self.settings.remove(setting_to_remove)
+    pub fn remove(&mut self, setting_to_remove: &K) -> Option<V> {
+        self.hashmap.remove(setting_to_remove)
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
@@ -1368,8 +1230,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account,Setting};
-    /// let mut account = Account::<String,String>::new(
+    /// use hashmap_settings::{Account};
+    /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
     ///     Default::default(),
@@ -1382,9 +1244,9 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///                 "3_2".to_string(),
     ///                 true,
     ///                 HashMap::from([
-    ///                     ("int".to_string(),42.stg()),
-    ///                     ("bool".to_string(),true.stg()),
-    ///                     ("char".to_string(),'c'.stg()),
+    ///                     ("answer".to_string(),42),
+    ///                     ("zero".to_string(),0),
+    ///                     ("big_number".to_string(),10000),
     ///                 ]),
     ///                 Default::default()),
     ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
@@ -1392,14 +1254,14 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep_remove(&"int".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42.stg())));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get::<i32>(&"int".to_string()), None);
+    /// assert_eq!(account.deep_remove(&"answer".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"int".to_string()), None);
     /// ```
     pub fn deep_remove(
         &mut self,
         setting_to_remove: &K,
         account_names: &mut Vec<&N>,
-    ) -> Result<Option<Box<(dyn Setting + 'static)>>, DeepError> {
+    ) -> Result<Option<V>, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
             return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
         };
@@ -1435,12 +1297,12 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// ```
     /// use hashmap_settings::{Account};
     /// use std::collections::HashMap;
-    /// let account = Account::<(),()>::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
+    /// let account = Account::<(),(),()>::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     #[must_use]
     pub fn capacity(&self) -> usize {
-        self.settings.capacity()
+        self.hashmap.capacity()
     }
     /// Returns the number of elements in the `Vec` of child `Accounts`,
     /// also referred to as its 'length'.
@@ -1451,7 +1313,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::Account;
-    /// let account = Account::<i32,()>::new(
+    /// let account = Account::<i32,(),()>::new(
     ///         Default::default(),
     ///         Default::default(),
     ///         Default::default(),
@@ -1475,10 +1337,10 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),()>::default();
+    /// let mut account = Account::<(),(),()>::default();
     /// assert!(account.is_empty());
     ///
-    /// account.push(Account::<(),()>::default());
+    /// account.push(Account::<(),(),()>::default());
     /// assert!(!account.is_empty());
     /// ```
     #[must_use]
@@ -1502,7 +1364,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account,types::errors::InvalidAccountError};
-    /// let mut account = Account::<i32,()>::new(
+    /// let mut account = Account::<i32,(),()>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
@@ -1537,8 +1399,8 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
             return Some(error);
         }
         if account.active {
-            for setting in account.settings.keys() {
-                self.insert_box(setting.to_owned(), account.get_box(setting).unwrap().clone());
+            for setting in account.hashmap.keys() {
+                self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
         self.accounts.push(account);
@@ -1555,7 +1417,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<i32,()>::new(
+    /// let mut account = Account::<i32,(),()>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
@@ -1567,7 +1429,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// );
     /// account.pop_keep();
     /// assert!(account ==
-    ///     Account::<i32,()>::new(
+    ///     Account::<i32,(),()>::new(
     ///         Default::default(),
     ///         Default::default(),
     ///         Default::default(),
@@ -1593,7 +1455,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     ///
     /// ```
     /// use hashmap_settings::{Account};
-    /// let mut account = Account::<i32,()>::new(
+    /// let mut account = Account::<i32,(),()>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     Default::default(),
@@ -1605,7 +1467,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
     /// );
     /// account.pop();
     /// assert!(account ==
-    ///     Account::<i32,()>::new(
+    ///     Account::<i32,(),()>::new(
     ///         Default::default(),
     ///         Default::default(),
     ///         Default::default(),
@@ -1620,7 +1482,7 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
         let popped_account = self.accounts.pop()?;
         for setting in popped_account.keys() {
             if !self.vec_contains_key(setting) {
-                self.settings.remove(setting);
+                self.hashmap.remove(setting);
             }
         }
         Some(popped_account)
@@ -1654,18 +1516,29 @@ impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Has
         }
     */
 }
-impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Hash + 'static> Default for Account<N,K> {
+impl<
+        N: Setting + Clone + Debug + Eq + Hash + Default,
+        K: Clone + Debug + Eq + Hash + 'static,
+        V: Clone + Debug + PartialEq + 'static,
+    > Default for Account<N, K, V>
+{
     fn default() -> Self {
         Self {
             name: N::default(),
             active: true,
-            settings: HashMap::default(),
+            hashmap: HashMap::default(),
             accounts: Vec::default(),
         }
     }
 }
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl<N: Setting + Clone + Debug + Eq + Hash + Default,K: Clone +Debug + Eq + Hash + 'static> Setting for Account<N,K> {}
+impl<
+        N: Setting + Clone + Debug + Eq + Hash + Default,
+        K: Clone + Debug + Eq + Hash + 'static,
+        V: Clone + Debug + PartialEq + 'static,
+    > Setting for Account<N, K, V>
+{
+}
 
 /// Required trait for any type that that will be used as a setting
 ///
@@ -1689,16 +1562,18 @@ pub trait Setting: Any + Debug + DynClone + DynEq {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{stg,Setting};
+    /// use hashmap_settings::{Setting,Stg};
     /// let bool = true;
-    /// let bool_stg: Box<dyn Setting> = bool.stg();
-    /// assert!(bool_stg == stg(bool))
+    /// let bool_stg: Stg = bool.stg();
+    /// assert!(bool_stg == bool.stg())
     /// ```
-    fn stg(self) -> Box<dyn Setting>
+    fn stg(self) -> Stg
     where
         Self: Setting + Sized,
     {
-        Box::new(self)
+        Stg {
+            value: Box::new(self),
+        }
     }
 }
 dyn_clone::clone_trait_object!(Setting);
@@ -1710,107 +1585,188 @@ impl PartialEq for Box<dyn Setting> {
     }
 }
 
-///turns a type implementing [`Setting`] into a [`Box<dyn Setting>`]
-///
-/// # Examples
-///
-/// ```
-/// use hashmap_settings::{stg,Setting};
-/// let bool = true;
-/// let bool_stg: Box<dyn Setting> = stg(bool);
-/// assert!(bool_stg == bool.stg())
-/// ```
+/// todo!(description)
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug)]
 #[must_use]
-pub fn stg<T: Setting>(value: T) -> Box<dyn Setting> {
-    value.stg()
+pub struct Stg {
+    value: Box<dyn Setting>,
 }
-/// turns a [`Box<dyn Setting>`] into a `T`,can [`panic!`]
-///
-/// This is the main function used to get a concrete type out of a `Box<dyn Setting>`.
-///
-/// # Panics
-///
-/// We need to be careful using `unstg` as if we try convert to a type
-/// that isn't the one contained in the `dyn Setting` the program will panic.
-/// Consider using [`safe_unstg`] as it returns a result type instead.
-///
-/// ```should_panic
-/// use hashmap_settings::{Setting,stg,unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// let _number :i32 = unstg(bool_stg);
-/// // this panics, as the Box<dyn Setting> holds a bool value but we are trying to convert it to a i32
-/// ```
-/// # Examples
-///
-/// ```
-/// use hashmap_settings::{Setting,stg,unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// assert_eq!(unstg::<bool>(bool_stg), true);
-/// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
-/// ```
-/// ```
-/// use hashmap_settings::{Setting,stg,unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// let bool :bool = unstg(bool_stg);
-/// // here we don't as we specific the type annotation when we use :bool
-/// assert_eq!(bool, true);
-/// ```
-#[must_use]
-pub fn unstg<T: Setting>(stg: Box<dyn Setting>) -> T {
-    let x: Box<dyn Any> = stg;
-    *x.downcast().unwrap()
+impl Stg {
+    /// todo!()
+    /// # Errors
+    /// todo!()
+    pub fn unstg<T: Setting>(self) -> Result<T, Box<dyn Any>> {
+        let x: Box<dyn Any> = self.value;
+        x.downcast().map(|t| *t)
+    }
+    /// todo!()
+    /// # Panics
+    /// todo!()
+    #[must_use]
+    pub fn unstg_panic<T: Setting>(self) -> T {
+        let x: Box<dyn Any> = self.value;
+        *x.downcast().unwrap()
+    }
 }
-/// turns a [`Box<dyn Setting>`] into a [`Box<T>`]
+#[cfg_attr(feature = "serde", typetag::serde)]
+impl Setting for Stg {}
+impl PartialEq for Stg {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value.clone()
+    }
+}
+impl StgTrait for Option<&Stg> {
+    /// Returns the value corresponding to the key.
+    ///
+    /// Will return an [GetError] when the value isn't found, or when the value is found
+    /// but isn't of the type that it is being converted to.
+    ///
+    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
+    /// # Errors
+    ///
+    /// This function can return [GetErrors](GetError).
+    ///
+    /// [None](GetError::None) when the value is not contained in the Account.
+    /// [WrongType][GetError::WrongType] when the value is contained, but it was been tried
+    /// to convert to the wrong type
+    ///
+    /// # Examples
+    /// todo!()
+    /// ```
+    ///
+    /// //use hashmap_settings::{Account,types::errors::GetError};
+    /// //let mut account: Account<(),&str> = Default::default();
+    /// //account.insert("a small number", 42);
+    /// //assert_eq!(account.get_error::<i32>(&"a small number"), Ok(42));
+    /// //assert_eq!(account.get_error::<i32>(&"a big number"), Err(GetError::None));
+    /// //assert_eq!(account.get_error::<String>(&"a small number"), Err(GetError::WrongType));
+    /// ```
+    fn unstg<T: Setting>(self) -> Result<T, GetError> {
+        self.map_or(Err(GetError::None), |value| {
+            match value.clone().unstg::<T>() {
+                Ok(value) => Ok(value),
+                Err(_error) => Err(GetError::WrongType), //Err(GetError::WrongType(value.clone())),
+            }
+        })
+    }
+
+    fn unstg_panic<T: Setting>(self) -> T {
+        self.unwrap().clone().unstg_panic()
+    }
+}
+
+/// todo!(document)
 ///
-/// [´unstg´] is the main way to get a value out of a `Box<dyn Setting>` but
-/// `safe_unstg` is used for when there is a chance we might convert to a
-/// type that isn't the one contained in the `dyn Setting`.
-///
-/// Dealing with a `Ok(Box<T>)` can be inconvenient so consider
-/// using [`unstg`] if it's guaranteed that we will convert to the right type.
-///
-/// # Example
-///
+/// #Example
 /// ```
-/// use hashmap_settings::{Setting,stg,safe_unstg};
+/// # use hashmap_settings::{Account,Setting,Stg,StgTrait,types::errors::GetError};
 ///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// assert_eq!(safe_unstg::<bool>(bool_stg).unwrap(), Box::new(true));
-/// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+///
+///         //creating a basic account
+///         let mut account = Account::<(), &str, Stg>::default();
+///
+///         //inserting values of distinct types
+///         account.insert("Number of trees", 5.stg());
+///         account.insert("Grass color", "green".to_string().stg());
+///         account.insert("Today is good", true.stg());
+///
+///         //getting values from the account
+///         let today_bool: bool = account.get(&"Today is good").unstg()?;
+///         let grass_color: String = account.get(&"Grass color").unstg_panic();
+///         let trees: i32 = account.get(&"Number of trees").unstg()?;
+///
+///         //example of using the values
+///         print!(
+///             "It's {today_bool} that today is a wonderful day,
+///     the grass is {grass_color} and I can see {trees} trees in the distance"
+///         );
+///         Ok::<(), GetError>(())
 /// ```
 ///
-/// ```
-/// use hashmap_settings::{Setting,stg,safe_unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// let bool :bool = *safe_unstg(bool_stg).unwrap();
-/// // here we don't as we specific the type annotation when we use :bool
-/// assert_eq!(bool, true);
-/// ```
-///
-/// # Errors
-///
-/// This function returns a Err(Box<dyn Any>) if we try to covert to the wrong type.
-///
-/// ```
-/// use hashmap_settings::{Setting,stg,safe_unstg};
-///
-/// let bool_stg: Box<dyn Setting> = stg(true);
-/// let number = match safe_unstg::<i32>(bool_stg){
-///     Ok(x)   => *x, //unreachable!()
-///     Err(x)  => {
-///         print!("wrong conversion {:?}",x);
-///         404
-///     },
-/// };
-/// assert_eq!(number, 404)
-/// ```
-pub fn safe_unstg<T: Setting>(stg: Box<dyn Setting>) -> Result<Box<T>, Box<dyn Any>> {
-    let x: Box<dyn Any> = stg;
-    x.downcast()
+pub trait StgTrait {
+    /// turns a [`Box<dyn Setting>`] into a [`Box<T>`]
+    ///
+    /// [´unstg´] is the main way to get a value out of a `Box<dyn Setting>` but
+    /// `safe_unstg` is used for when there is a chance we might convert to a
+    /// type that isn't the one contained in the `dyn Setting`.
+    ///
+    /// Dealing with a `Ok(Box<T>)` can be inconvenient so consider
+    /// using [`unstg`] if it's guaranteed that we will convert to the right type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// assert_eq!(bool_stg.unstg::<bool>().unwrap(), true);
+    /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+    /// ```
+    ///
+    /// ```
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// let bool :bool = bool_stg.unstg().unwrap();
+    /// // here we don't as we specific the type annotation when we use :bool
+    /// assert_eq!(bool, true);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// This function returns a Err(Box<dyn Any>) if we try to covert to the wrong type.
+    ///
+    /// ```
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// let number = match bool_stg.unstg::<i32>(){
+    ///     Ok(x)   => x, //unreachable!()
+    ///     Err(x)  => {
+    ///         print!("wrong conversion {:?}",x);
+    ///         404
+    ///     },
+    /// };
+    /// assert_eq!(number, 404)
+    /// ```
+    fn unstg<T: Setting>(self) -> Result<T, GetError>;
+    /// turns a [`Stg`] into a `T`,can [`panic!`]
+    ///
+    /// This is the main function used to get a concrete type out of a `Box<dyn Setting>`.
+    ///
+    /// # Panics
+    ///
+    /// We need to be careful using `unstg` as if we try convert to a type
+    /// that isn't the one contained in the `dyn Setting` the program will panic.
+    /// Consider using [`get_error`] as it returns a result type instead.
+    ///
+    /// ```should_panic
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// let _number :i32 = bool_stg.unstg_panic();
+    /// // this panics, as the Box<dyn Setting> holds a bool value but we are trying to convert it to a i32
+    /// ```
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// assert_eq!(bool_stg.unstg_panic::<bool>(), true);
+    /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+    /// ```
+    /// ```
+    /// use hashmap_settings::{Setting,Stg};
+    ///
+    /// let bool_stg: Stg = true.stg();
+    /// let bool :bool = bool_stg.unstg_panic();
+    /// // here we don't as we specific the type annotation when we use :bool
+    /// assert_eq!(bool, true);
+    /// ```
+    #[must_use]
+    fn unstg_panic<T: Setting>(self) -> T;
 }
 
 #[cfg(test)]
@@ -1818,16 +1774,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn doc_example() -> Result<(), GetError> {
+        // # use hashmap_settings::Account;
+
+        //creating a basic account
+        let mut account = Account::<(), &str, Stg>::default();
+
+        //inserting values of distinct types
+        account.insert("Number of trees", 5.stg());
+        account.insert("Grass color", "green".to_string().stg());
+        account.insert("Today is good", true.stg());
+
+        //getting values from the account
+        let today_bool: bool = account.get(&"Today is good").unstg()?;
+        let grass_color: String = account.get(&"Grass color").unstg_panic();
+        let trees: i32 = account.get(&"Number of trees").unstg()?;
+
+        //example of using the values
+        print!(
+            "It's {today_bool} that today is a wonderful day,
+    the grass is {grass_color} and I can see {trees} trees in the distance"
+        );
+        Ok(())
+    }
+    #[test]
     fn account_test() {
         let bool_setting = true;
         let i32_setting = 42;
-        let mut account = Account::<(),String>::default();
-        account.insert("bool_setting".to_string(), bool_setting);
-        account.insert("i32_setting".to_string(), i32_setting);
-        let i32s: i32 = account.get(&"i32_setting".to_string()).unwrap();
+        let mut account = Account::<(), String, Stg>::default();
+        account.insert("bool_setting".to_string(), bool_setting.stg());
+        account.insert("i32_setting".to_string(), i32_setting.stg());
+        let i32s: i32 = account
+            .get(&"i32_setting".to_string())
+            .unwrap()
+            .clone()
+            .unstg_panic();
         assert_eq!(i32s, 42);
-        let stg: Box<dyn Setting> = account.get_box(&"bool_setting".to_string()).unwrap().clone();
-        assert!(unstg::<bool>(stg));
+        let stg: Stg = account.get(&"bool_setting".to_string()).unwrap().clone();
+        assert!(stg.unstg_panic::<bool>());
     }
     #[test]
     fn partialeq_test() {
@@ -1841,8 +1825,8 @@ mod tests {
             HashMap::default(),
             Vec::default(),
         );
-        account1.insert("answer to everything", 42);
-        account1.insert("true is true", true);
+        account1.insert("answer to everything", 42.stg());
+        account1.insert("true is true", true.stg());
         let account2 = Account::new(
             "name".to_string(),
             Default::default(),
