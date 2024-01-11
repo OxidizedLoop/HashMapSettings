@@ -721,7 +721,8 @@ impl<
     ///     ],
     /// );
     ///
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&42));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&42));
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
     /// ```
     pub fn deep(&self, account_names: &mut Vec<&N>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -782,8 +783,9 @@ impl<
     ///         ])
     ///     ],
     /// );
-    /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().insert("answer".to_string(), 777), Some(42));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&777));
+    /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()])?.insert("answer".to_string(), 777), Some(42));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&777));
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
     /// ```
     pub fn deep_mut(&mut self, account_names: &mut Vec<&N>) -> Result<&mut Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -885,7 +887,8 @@ impl<
     /// );
     ///
     /// assert_eq!(account.deep_insert(&"answer".to_string(), 777, &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"answer".to_string()), Some(&777));
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&777));
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
     /// ```
     pub fn deep_insert(
         &mut self,
@@ -1255,7 +1258,8 @@ impl<
     /// );
     ///
     /// assert_eq!(account.deep_remove(&"answer".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
-    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()]).unwrap().get(&"int".to_string()), None);
+    /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"int".to_string()), None);
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
     /// ```
     pub fn deep_remove(
         &mut self,
@@ -1713,17 +1717,19 @@ pub trait StgTrait {
     /// use hashmap_settings::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
-    /// assert_eq!(bool_stg.unstg::<bool>().unwrap(), true);
+    /// assert_eq!(bool_stg.unstg::<bool>()?, true);
     /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
+    /// # Ok::<(),Box<dyn core::any::Any>>(())
     /// ```
     ///
     /// ```
     /// use hashmap_settings::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
-    /// let bool :bool = bool_stg.unstg().unwrap();
+    /// let bool :bool = bool_stg.unstg()?;
     /// // here we don't as we specific the type annotation when we use :bool
     /// assert_eq!(bool, true);
+    /// # Ok::<(),Box<dyn core::any::Any>>(())
     /// ```
     ///
     /// # Errors
