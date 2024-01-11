@@ -1531,13 +1531,26 @@ impl<
         }
     }
 }
-#[cfg_attr(feature = "serde", typetag::serde)]
-impl<
-        N: Setting + Clone + Debug + Eq + Hash + Default,
-        K: Clone + Debug + Eq + Hash + 'static,
-        V: Clone + Debug + PartialEq + 'static,
-    > Setting for Account<N, K, V>
-{
+cfg_if::cfg_if! {
+    if #[cfg(serde)] {
+        #[cfg_attr(feature = "serde", typetag::serialize)]
+        impl<
+                N: Setting + Clone + Debug + Eq + Hash + Default + Serialize + for<'a> Deserialize<'a>,
+                K: Clone + Debug + Eq + Hash + 'static + Serialize + for<'a> Deserialize<'a>,
+                V: Clone + Debug + PartialEq + 'static + Serialize + for<'a> Deserialize<'a>,
+            > Setting for Account<N, K, V>
+        {
+            fn typetag_deserialize(&self) {
+                //todo!(figure what this is supposed to do as its not mut, and return "()")
+            }
+        }
+    }else{
+        impl<
+            N: Setting + Clone + Debug + Eq + Hash + Default,
+            K: Clone + Debug + Eq + Hash + 'static,
+            V: Clone + Debug + PartialEq + 'static,
+        > Setting for Account<N, K, V>{}
+    }
 }
 
 /// Required trait for any type that that will be used as a setting
