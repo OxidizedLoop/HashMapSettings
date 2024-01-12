@@ -77,7 +77,7 @@ use std::{
 };
 /// module containing types used internally by the crate
 pub mod types;
-use types::errors::{DeepError, GetError, InvalidAccountError};
+use types::errors::{DeepError, InvalidAccountError, StgError};
 
 /// A [`HashMap`] with an associated name permitting layered settings.
 ///
@@ -156,9 +156,9 @@ use types::errors::{DeepError, GetError, InvalidAccountError};
 ///
 ///  - [`deep_insert`](Account::deep_insert):Inserts a key-value pair into the map of a child Account
 ///
-///  - [`insert_box`](Account::insert): `insert` but `Box<dyn Setting>` instead of T
+///  - [`insert_box`](Account::insert): `insert` but `Box<dyn Setting>` instead of S
 ///
-///  - [`deep_insert_box`](Account::deep_insert_box): `deep_insert` but `Box<dyn Setting>` instead of T
+///  - [`deep_insert_box`](Account::deep_insert_box): `deep_insert` but `Box<dyn Setting>` instead of S
 ///
 ///  - [`keys`](Account::keys): An iterator visiting all keys in arbitrary order
 ///
@@ -515,11 +515,11 @@ impl<
     }
     /// Takes a `bool` and changes the value of active of a child `Account`.
     ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function. [`change_activity`](Account::change_activity) in this case.
     ///
     /// Also updates the settings, contained on the updated account, in all the affected accounts such that they
-    /// contain the correct accounts.
+    /// contain the correct values.
     ///
     /// # Errors
     ///
@@ -601,7 +601,7 @@ impl<
             (Err(DeepError::NotFound), vec![])
         }
     }
-    /// Takes a `&K` and updates the name of the `Account`.
+    /// Takes a `&N` and updates the name of the `Account`.
     ///
     /// Returns the previous name that the Account had.
     ///
@@ -624,12 +624,12 @@ impl<
         self.name = new_name;
         r_value
     }
-    /// Takes a `&K` and updates the name of a child `Account`.
+    /// Takes a `&N` and updates the name of a child `Account`.
     ///
     /// This can make a Account [invalid](Account#valid) if the child Account
     /// got renamed to the same name as one of it's siblings.
     ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
     ///
     /// # Errors
@@ -686,7 +686,7 @@ impl<
     /// `deep` can be used with other methods that don't need a `&mut self` (like
     /// [get](Account::get) or [len](Account::len)) to use those methods on child `Account`s
     ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function.
     ///
     /// # Errors
@@ -741,16 +741,14 @@ impl<
                 },
             )
     }
-    /// Returns a mut reference to a child `Account`.
+    /// Returns a mutable reference to a child `Account`.
     ///
     /// Consider using [`deep`](Account::deep) with methods that don't need a `&mut self`,
     /// or the respective [deep_function](Account#deep-functions) for a specific method as
     /// `deep_mut` can make an account [invalid])(Account#valid)
     ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function.
-    ///
-    /// Using `deep_mut`
     ///
     /// # Errors
     ///
@@ -846,12 +844,10 @@ impl<
     }
     /// Inserts a key-value pair into the map of a child `Account`.
     ///
-    /// This method is a call to [deep_insert_box](Account::deep_insert_box) after T is turned into a V.
-    ///
     /// This will updated the [settings](Account#settings) of all necessary Accounts
     /// so that the parent Account remains [valid](Account#valid)
     ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
     ///
     /// # Errors
@@ -924,7 +920,7 @@ impl<
     ///
     /// Returns `None` if the setting isn't present in the Account or child Accounts.
     /// Returns `Some(true)` if the value of the setting was updated.
-    /// Returns `Some(false)` if the value of the Account but was not updated.
+    /// Returns `Some(false)` if the value is in the Account but was not updated.
     ///
     /// if you don't need the return value use [update_setting](update_setting) as it is faster
     ///
@@ -935,6 +931,7 @@ impl<
     /// ```
     ///  //todo!() add example
     /// ```
+    #[must_use]
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
@@ -1041,9 +1038,9 @@ impl<
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
-    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    /// This child `Account` settings will be added to the settings of the parent `Account` that `push` was called on.
     ///
-    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
+    /// The parent Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
     ///
     /// Won't return an error if the child `Account` being pushed is [invalid](Account#valid)
     /// but will cause unintended behavior for future calls to the main `Account`.
@@ -1109,11 +1106,7 @@ impl<
     }
     /// Returns the value corresponding to the key.
     ///
-    /// Internally [ok()](Result::ok) id called on [get_error](Account::get_error) to convert to [Option] from a [Result].
-    /// This means that any [GetError::WrongType] error will be converted to [None] meaning that the value can be present
-    /// in the HashMap but we won't get it in case we try to convert it to the wrong type.
-    ///
-    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
+    /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get).
     ///
     /// # Examples
     ///
@@ -1129,12 +1122,9 @@ impl<
     pub fn get(&self, setting_name: &K) -> Option<&V> {
         self.hashmap.get(setting_name)
     }
-
     /// Inserts a key-value pair into the map.
     ///
-    /// This method is a call to [insert_box](Account::insert_box) after T is turned into a Box<dyn Setting>.
-    ///
-    /// If the map did not have this key present, None is returned.
+    /// If the map did not have this key present, `None` is returned.
     ///
     /// If the map did have this key present, the value is updated, and the old
     /// value is returned. The key is not updated, though; this matters for
@@ -1196,8 +1186,6 @@ impl<
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
-    /// [unstg] and [safe_unstg] can be used to get the value from the box in case it's needed.
-    ///
     /// This method is a direct call to [`HashMap`]'s [`remove()`](HashMap::remove).
     ///
     /// # Examples
@@ -1214,10 +1202,8 @@ impl<
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
-    /// [unstg] and [safe_unstg] can be used to get the value from the box in case it's needed.
-    ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &K to identify
-    /// the child `Account` to run the function. [`insert`](Account::insert) in this case.
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
+    /// the child `Account` to run the function. [`remove`](Account::remove) in this case.
     ///
     /// This method is a direct call to [`HashMap`]'s [`remove()`](HashMap::remove).
     ///
@@ -1284,10 +1270,9 @@ impl<
             Err(DeepError::NotFound)
         }
     }
-
     /// Returns the number of elements the map can hold without reallocating.
     ///
-    /// This number is a lower bound; the `HashMap<K, Box<dyn Setting>>` might be able to hold
+    /// This number is a lower bound; the `HashMap<K, V>` might be able to hold
     /// more, but is guaranteed to be able to hold at least this many.
     ///
     /// This method is a direct call to [`HashMap`]'s [`keys()`](HashMap::keys()).
@@ -1406,10 +1391,14 @@ impl<
         self.accounts.push(account);
         None
     }
-    /// Removes the last element from a vector and returns it, or [`None`] if it is empty.
+    /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
-    /// Use [pop_remove](Account::pop_remove) if you intend to remove settings from
-    /// the main `Account` present only on the popped child `Account`.
+    /// This method doesn't update the parent `Account` making it [invalid](Account#valid), so it's use
+    /// is only recommend if multiple `Accounts` are being removed.
+    /// 
+    /// Use [pop](Account::pop) if you intend to update the settings from
+    /// the main `Account` present on the popped child `Account`.
+    /// 
     ///
     /// This method is a direct call to [`Vec`]'s [`pop()`](Vec::pop()).
     ///
@@ -1443,10 +1432,10 @@ impl<
     pub fn pop_keep(&mut self) -> std::option::Option<Self> {
         self.accounts.pop()
     }
-    /// Removes the last element from a vector and returns it, or [`None`] if it empty.
+    /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
-    /// Will remove settings from the parent `Account` present only on the popped child `Account`.
-    /// Use [pop_keep](Account::pop) if you want the parent `Account` settings to remain unchanged.
+    /// Will update the settings from the parent `Account` present on the popped child `Account`.
+    /// Consider using [pop_keep](Account::pop) if you are removing multiple child `Accounts`.
     ///
     ///
     /// This method contains a call to [`Vec`]'s [`pop()`](Vec::pop()).
@@ -1553,7 +1542,7 @@ cfg_if::cfg_if! {
     }
 }
 
-/// Required trait for any type that that will be used as a setting
+/// Required trait for conversion to abstract type [Stg]
 ///
 /// For a Type to be able to implement Setting it needs to implement the traits
 /// [Clone], [Debug], [PartialEq] (as well as [Deserialize] and [Serialize] if the "serde" feature is activated )
@@ -1570,7 +1559,7 @@ cfg_if::cfg_if! {
 /// ```
 #[cfg_attr(feature = "serde", typetag::serde(tag = "setting"))]
 pub trait Setting: Any + Debug + DynClone + DynEq {
-    ///turns a type implementing [Setting] into a [Box<dyn Setting>]
+    /// turns a type implementing [Setting] into a [Stg]
     ///
     /// # Examples
     ///
@@ -1598,7 +1587,28 @@ impl PartialEq for Box<dyn Setting> {
     }
 }
 
-/// todo!(description)
+/// Type abstraction for types implementing [`Setting`]
+///
+/// Types implementing `Setting` can be turned into a `Stg` with [.stg()](Setting::stg).
+///
+/// ```
+/// todo!(example)
+/// ```
+///
+/// They can be turned back to a specific type with [.unstg()](Stg::unstg) or [.unstg_panic()](Stg::unstg_panic)
+///
+///  ```
+/// todo!(example)
+/// ```
+///
+/// Additionally there is the [`StgTrait`] that can be implemented for types containing `Stg` to allow
+/// `.unstg()` and `.unstg_panic()` to be called on them.
+///
+/// The main example would be [Option<&Stg>]
+///
+///  ```
+/// todo!(example)
+/// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug)]
 #[must_use]
@@ -1606,106 +1616,11 @@ pub struct Stg {
     value: Box<dyn Setting>,
 }
 impl Stg {
-    /// todo!()
-    /// # Errors
-    /// todo!()
-    pub fn unstg<T: Setting>(self) -> Result<T, Box<dyn Any>> {
-        let x: Box<dyn Any> = self.value;
-        x.downcast().map(|t| *t)
-    }
-    /// todo!()
-    /// # Panics
-    /// todo!()
-    #[must_use]
-    pub fn unstg_panic<T: Setting>(self) -> T {
-        let x: Box<dyn Any> = self.value;
-        *x.downcast().unwrap()
-    }
-}
-#[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Stg {}
-impl PartialEq for Stg {
-    fn eq(&self, other: &Self) -> bool {
-        self.value == other.value.clone()
-    }
-}
-impl StgTrait for Option<&Stg> {
-    /// Returns the value corresponding to the key.
+    /// turns a [`Stg`] into a `Result<S, Box<dyn Any>>`
     ///
-    /// Will return an [GetError] when the value isn't found, or when the value is found
-    /// but isn't of the type that it is being converted to.
+    /// ´unstg´ is the main and safe way to used to get a concrete type `S` from `Stg`
     ///
-    /// This method contains a call to [`HashMap`]'s [`get()`](HashMap::get).
-    /// # Errors
-    ///
-    /// This function can return [GetErrors](GetError).
-    ///
-    /// [None](GetError::None) when the value is not contained in the Account.
-    /// [WrongType][GetError::WrongType] when the value is contained, but it was been tried
-    /// to convert to the wrong type
-    ///
-    /// # Examples
-    /// todo!()
-    /// ```
-    ///
-    /// //use hashmap_settings::{Account,types::errors::GetError};
-    /// //let mut account: Account<(),&str> = Default::default();
-    /// //account.insert("a small number", 42);
-    /// //assert_eq!(account.get_error::<i32>(&"a small number"), Ok(42));
-    /// //assert_eq!(account.get_error::<i32>(&"a big number"), Err(GetError::None));
-    /// //assert_eq!(account.get_error::<String>(&"a small number"), Err(GetError::WrongType));
-    /// ```
-    fn unstg<T: Setting>(self) -> Result<T, GetError> {
-        self.map_or(Err(GetError::None), |value| {
-            match value.clone().unstg::<T>() {
-                Ok(value) => Ok(value),
-                Err(_error) => Err(GetError::WrongType), //Err(GetError::WrongType(value.clone())),
-            }
-        })
-    }
-
-    fn unstg_panic<T: Setting>(self) -> T {
-        self.unwrap().clone().unstg_panic()
-    }
-}
-
-/// todo!(document)
-///
-/// #Example
-/// ```
-/// # use hashmap_settings::{Account,Setting,Stg,StgTrait,types::errors::GetError};
-///
-///
-///         //creating a basic account
-///         let mut account = Account::<(), &str, Stg>::default();
-///
-///         //inserting values of distinct types
-///         account.insert("Number of trees", 5.stg());
-///         account.insert("Grass color", "green".to_string().stg());
-///         account.insert("Today is good", true.stg());
-///
-///         //getting values from the account
-///         let today_bool: bool = account.get(&"Today is good").unstg()?;
-///         let grass_color: String = account.get(&"Grass color").unstg_panic();
-///         let trees: i32 = account.get(&"Number of trees").unstg()?;
-///
-///         //example of using the values
-///         print!(
-///             "It's {today_bool} that today is a wonderful day,
-///     the grass is {grass_color} and I can see {trees} trees in the distance"
-///         );
-///         Ok::<(), GetError>(())
-/// ```
-///
-pub trait StgTrait {
-    /// turns a [`Box<dyn Setting>`] into a [`Box<T>`]
-    ///
-    /// [´unstg´] is the main way to get a value out of a `Box<dyn Setting>` but
-    /// `safe_unstg` is used for when there is a chance we might convert to a
-    /// type that isn't the one contained in the `dyn Setting`.
-    ///
-    /// Dealing with a `Ok(Box<T>)` can be inconvenient so consider
-    /// using [`unstg`] if it's guaranteed that we will convert to the right type.
+    /// Consider using [`unstg_panic`] if it's guaranteed that we will convert to the right type.
     ///
     /// # Example
     ///
@@ -1745,16 +1660,20 @@ pub trait StgTrait {
     /// };
     /// assert_eq!(number, 404)
     /// ```
-    fn unstg<T: Setting>(self) -> Result<T, GetError>;
-    /// turns a [`Stg`] into a `T`,can [`panic!`]
+    pub fn unstg<S: Setting>(self) -> Result<S, Box<dyn Any>> {
+        let x: Box<dyn Any> = self.value;
+        x.downcast().map(|t| *t)
+    }
+    /// turns a [`Stg`] into a concrete type `S`, can [`panic!`]
     ///
-    /// This is the main function used to get a concrete type out of a `Box<dyn Setting>`.
+    /// This method is used to get a concrete type out of a `Stg`
+    /// when it's know what `S` it contains.
     ///
     /// # Panics
     ///
-    /// We need to be careful using `unstg` as if we try convert to a type
-    /// that isn't the one contained in the `dyn Setting` the program will panic.
-    /// Consider using [`get_error`] as it returns a result type instead.
+    /// We need to be careful using `unstg_panic` as if we try convert to a type
+    /// that isn't the one contained in `Stg` the program will panic.
+    /// Consider using [`unstg`] as it returns a result type instead.
     ///
     /// ```should_panic
     /// use hashmap_settings::{Setting,Stg};
@@ -1781,7 +1700,112 @@ pub trait StgTrait {
     /// assert_eq!(bool, true);
     /// ```
     #[must_use]
-    fn unstg_panic<T: Setting>(self) -> T;
+    pub fn unstg_panic<S: Setting>(self) -> S {
+        let x: Box<dyn Any> = self.value;
+        *x.downcast().unwrap()
+    }
+}
+#[cfg_attr(feature = "serde", typetag::serde)]
+impl Setting for Stg {}
+impl PartialEq for Stg {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value.clone()
+    }
+}
+impl StgTrait for Option<&Stg> {
+    fn unstg<S: Setting>(self) -> Result<S, StgError> {
+        self.map_or(Err(StgError::None), |value| {
+            match value.clone().unstg::<S>() {
+                Ok(value) => Ok(value),
+                Err(_error) => Err(StgError::WrongType), //todo! change WrongType to contain error Err(StgError::WrongType(error)),
+            }
+        })
+    }
+    fn unstg_panic<S: Setting>(self) -> S {
+        self.unwrap().clone().unstg_panic()
+    }
+}
+
+/// [`Stg`] container converter trait
+///
+/// This trait is implemented by types to facilitate the conversion from
+/// `T`<`Stg`> to a concrete type `S`.
+///
+/// Main example, and the use case of this crate, would be `Option<&Stg>` as it is what gets
+/// returned when calling `get` on an `HashMap`/`Account`
+///
+/// #Example
+/// ```
+/// # use hashmap_settings::{Account,Setting,Stg,StgTrait,types::errors::StgError};
+///
+/// //creating a Stg Account
+/// let mut account = Account::<(), &str, Stg>::default();
+///
+/// //inserting values of distinct types
+/// account.insert("Number of trees", 5.stg());
+/// account.insert("Grass color", "green".to_string().stg());
+/// account.insert("Today is good", true.stg());
+///
+/// //getting values from the account in 3 different ways
+/// let today_bool: bool    = account.get(&"Today is good").unstg()?;
+/// let grass_color: String = account.get(&"Grass color").unstg_panic();
+/// let trees: i32          = account.get(&"Number of trees").unwrap().clone().unstg().unwrap();
+/// //in the i32 example the last unwrap could be swapped for a "?" but it still would be a
+/// //more complicated method chain than the other two alternatives.
+///
+/// //example of using the values
+/// print!("It's {today_bool} that today is a wonderful day, the grass
+///     is {grass_color} and I see {trees} trees in the distance");
+/// # Ok::<(), StgError>(())
+/// ```
+///
+pub trait StgTrait {
+    /// Conversion to a Result<S, StgError>.
+    ///
+    /// Will return a [StgError] when the value isn't found, or when the value is found
+    /// but isn't of the type that it is being converted to.
+    ///
+    /// # Errors
+    ///
+    /// This function can return [StgErrors](StgError).
+    ///
+    /// [None](StgError::None) when the value is not contained in the `T<Stg>`.
+    /// [WrongType][StgError::WrongType] when the value is contained, but it was been tried
+    /// to convert it to the wrong type
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hashmap_settings::{Account,Stg,StgTrait,Setting,types::errors::StgError};
+    /// let mut account: Account<(),&str,Stg> = Default::default();
+    /// account.insert("a small number", 42_i32.stg());
+    /// assert_eq!(account.get(&"a small number").unstg::<i32>(), Ok(42));
+    /// assert_eq!(account.get(&"a big number").unstg::<i32>(), Err(StgError::None));
+    /// assert_eq!(account.get(&"a small number").unstg::<String>(), Err(StgError::WrongType));
+    /// ```
+    fn unstg<S: Setting>(self) -> Result<S, StgError>;
+    /// Conversion to concrete type `S`, can panic.
+    ///
+    /// in the case the conversion can't be made, this method should panic.
+    /// but this method should never be used if the conversion is not assured to be the correct one
+    /// and [`unstg`](StgTrait::unstg) should be used instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use hashmap_settings::{Account,Stg,StgTrait,Setting};
+    /// let mut account: Account<(),&str,Stg> = Default::default();
+    /// account.insert("a small number", 42_i32.stg());
+    /// assert_eq!(account.get(&"a small number").unstg_panic::<i32>(), 42);
+    /// ```
+    /// ```should_panic
+    /// # use hashmap_settings::{Account,Stg,StgTrait,Setting};
+    /// let mut account: Account<(),&str,Stg> = Default::default();
+    /// account.insert("a small number", 42_i32.stg());
+    /// assert_eq!(account.get(&"a small number").unstg_panic::<bool>(), true);//this panics
+    /// ```
+    #[must_use]
+    fn unstg_panic<S: Setting>(self) -> S;
 }
 
 #[cfg(test)]
@@ -1789,7 +1813,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn doc_example() -> Result<(), GetError> {
+    fn doc_example() -> Result<(), StgError> {
         // # use hashmap_settings::Account;
 
         //creating a basic account
