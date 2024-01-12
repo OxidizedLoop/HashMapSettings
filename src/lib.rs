@@ -1158,11 +1158,7 @@ impl<
     /// assert!(account.hashmap()[&"a small number"] == 3);
     /// ```
     pub fn insert(&mut self, setting_name: K, setting_value: V) -> Option<V> {
-        let mut return_value = None;
-        if let Some(value) = self.hashmap.insert(setting_name, setting_value) {
-            return_value = Some(value);
-        }
-        return_value
+        self.hashmap.insert(setting_name, setting_value)
     }
     /// An iterator visiting all keys in arbitrary order.
     /// The iterator element type is `&'a K`.
