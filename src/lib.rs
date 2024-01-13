@@ -79,34 +79,35 @@ use std::{
 pub mod types;
 use types::errors::{DeepError, InvalidAccountError, StgError};
 
-/// A [`HashMap`] with an associated name permitting layered settings.
+/// A [`HashMap`] wrapper for layered settings.
 ///
-/// An Account is a Wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
+/// The [`Stg`] type is a type abstraction that can be used to to have an `Account` with distinct types.
 ///
-/// An Account can also hold other [Accounts](Account#accounts). This allows for complex systems where
+/// An `Account<N,K,S>` can also hold other [Accounts](Account#accounts). This allows for complex systems where
 /// an app can have multiple layers of settings. The top most layer being the first one to be searched
 /// for a specific setting, and in the case it isn't found the next layer will be search, this will be
 /// done until the setting is found on the last layer that would be the default layer containing all the settings.
 ///
 ///
-///
 /// An `Account` contains the following fields:
 ///
-///  - [name](Account#name): [`String`],
+///
+///  - [name](Account#name): Name of type `N` ,
 ///
 ///  - [active](Account#active): [`bool`],
 ///
-///  - [settings](Account#settings): [`HashMap`]<[`String`],[`Box`]<dyn [`Setting`]>>,
+///  - [settings](Account#settings): A [`HashMap`]<`K`,`V`>,
 ///
-///  - [accounts](Account#accounts): [`Vec`]<`Account`>,
+///  - [accounts](Account#accounts): A [`Vec`]<`Account`>, of sub Accounts
 ///
 ///
 /// # New Account
 ///
+///
 /// Currently a new Account can be created with:
 ///  - [`new`](Account::new): Create a new Account.
 ///
-///  - [`new_valid`](Account::new_valid): Create a new Account that is guaranteed to be [valid](Account#valid).
+///  - [`new_valid`](Account::new_valid): Create a new Account that is [valid](Account#valid).
 ///
 ///  - [`clone`][Clone::clone]: Clone an existing Account.
 ///
@@ -114,6 +115,11 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 /// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but
 /// [child Accounts](Accounts#accounts) are made with with [new](Account::new) to avoid repeated validity checks.
+///
+///
+/// ```
+/// todo!(Account example)
+/// ```
 ///
 ///
 /// # [Name](Account#name)
@@ -126,14 +132,13 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 ///  - [`rename`](Account::rename): Rename an `Account`
 ///
-///  - [`deep_rename`](Account::deep_rename): Rename a [child](Account#accounts)  `Accounts`
+///  - [`deep_rename`](Account::deep_rename): Rename a [child](Account#accounts)  `Account`
 ///
 ///
 /// # [Active](Account#active)
 ///
 ///
-/// If a child `Account` is inactive it will be ignore by certain methods like [get()](Account::get)
-/// when this are called on the parent `Account`.
+/// If a child `Account` is inactive it's settings will be ignore by the parent `Account`.
 ///
 ///  - [`active`](Account::active): Get an account's activity state
 ///
@@ -150,19 +155,17 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 ///  - [`get`](Account::get): Returns a reference to the value corresponding to the key
 ///
-///  - [`deep_get`](Account::deep_get): Returns a reference to the value corresponding to the key on a child Account
-///
 ///  - [`insert`](Account::insert): Inserts a key-value pair into the map.
 ///
-///  - [`deep_insert`](Account::deep_insert):Inserts a key-value pair into the map of a child Account
+///  - [`deep_insert`](Account::deep_insert): Inserts a key-value pair into the map of a child Account.
 ///
-///  - [`insert_box`](Account::insert): `insert` but `Box<dyn Setting>` instead of S
+///  - [`remove`](Account::remove): Removes a key-value pair from the map.
 ///
-///  - [`deep_insert_box`](Account::deep_insert_box): `deep_insert` but `Box<dyn Setting>` instead of S
+///  - [`deep_remove`](Account::deep_remove): Removes a key-value pair from the map of a child Account.
 ///
 ///  - [`keys`](Account::keys): An iterator visiting all keys in arbitrary order
 ///
-///  - [`contains_key`](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key
+///  - [`contains_key`](Account::contains_key): Returns `true` if the `Account` contains a value for the specified key.
 ///
 ///  - [`capacity`](Account::capacity): Returns the number of elements the map can hold without reallocating.
 ///
@@ -189,8 +192,7 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 ///  - [`pop`](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 ///
-///  - [`pop_keep`](Account::pop_keep): `pop` but keeps settings in the main account
-///     even if they are not present in other child accounts
+///  - [`pop_keep`](Account::pop_keep): `pop` but updates the settings in the main account unlike `pop`
 ///
 ///
 /// # [Valid](Account#valid)
@@ -201,6 +203,8 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 /// and that would make other methods have unindent effects.
 ///
 /// If a method can make an `Account` invalid it will be mentioned.
+///
+/// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20) in should be made into a `Account` field
 ///
 /// ## Validity Defined:
 /// For an `Account` to be valid it needs to follow the following requirements:
@@ -220,7 +224,7 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 /// Deep Functions are versions of functions to interact with a child `Account`
 /// of the parent `Account` that the function is called.
 ///
-/// They accept an extra `Vec` of `&K` that are the list of child `Accounts`
+/// They accept an extra `Vec` of `&N` that are the list of child `Accounts`
 /// you have to pass though to get to the child `Account` the function will be called.
 /// For each value in the `Vec` the value to its right is its parent. Meaning that the right most value
 /// is the a direct child of the `Account` we call the function on, and the left most is the the `Account`
@@ -242,7 +246,7 @@ pub struct Account<
 > {
     name: N,
     active: bool,
-    hashmap: HashMap<K, V>,
+    settings: HashMap<K, V>,
     accounts: Vec<Account<N, K, V>>,
 }
 impl<
@@ -300,7 +304,7 @@ impl<
         Self {
             name,
             active,
-            hashmap: settings,
+            settings,
             accounts,
         }
     }
@@ -364,7 +368,7 @@ impl<
         let new_account = Self {
             name,
             active,
-            hashmap: settings,
+            settings,
             accounts,
         };
         new_account
@@ -437,7 +441,7 @@ impl<
     /// ```
     #[must_use]
     pub const fn hashmap(&self) -> &HashMap<K, V> {
-        &self.hashmap
+        &self.settings
     }
     /// Return a reference to the `Vec` of child `Accounts`
     ///
@@ -935,17 +939,17 @@ impl<
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].hashmap.get(setting) {
+                if let Some(value) = self.accounts[account].settings.get(setting) {
                     return Some(
                         !self
-                            .hashmap
+                            .settings
                             .insert(setting.to_owned(), value.clone())
                             .map_or(false, |x| &x == value),
                     );
                 }
             }
         }
-        self.hashmap.remove(setting).map(|_| true)
+        self.settings.remove(setting).map(|_| true)
     }
     /// Updates a setting with the value its supposed to have.
     ///
@@ -965,13 +969,13 @@ impl<
     pub fn update_setting(&mut self, setting: &K) {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].hashmap.get(setting) {
-                    self.hashmap.insert(setting.to_owned(), value.clone());
+                if let Some(value) = self.accounts[account].settings.get(setting) {
+                    self.settings.insert(setting.to_owned(), value.clone());
                     return;
                 }
             }
         }
-        self.hashmap.remove(setting);
+        self.settings.remove(setting);
     }
     /// Updates a group of settings with the value they are supposed to have.
     ///
@@ -989,13 +993,13 @@ impl<
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].hashmap.get(*setting) {
-                        self.hashmap.insert((*setting).to_owned(), value.clone());
+                    if let Some(value) = self.accounts[account].settings.get(*setting) {
+                        self.settings.insert((*setting).to_owned(), value.clone());
                         continue 'setting;
                     }
                 }
             }
-            self.hashmap.remove(*setting);
+            self.settings.remove(*setting);
         }
     }
     /// Updates all settings in the Account with the value they are supposed to have.
@@ -1012,20 +1016,20 @@ impl<
     /// ```
     pub fn update_all_settings(&mut self) {
         let settings = self
-            .hashmap
+            .settings
             .keys()
             .map(std::borrow::ToOwned::to_owned)
             .collect::<Vec<_>>();
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].hashmap.get(&setting.clone()) {
-                        self.hashmap.insert(setting.clone(), value.clone());
+                    if let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
+                        self.settings.insert(setting.clone(), value.clone());
                         continue 'setting;
                     }
                 }
             }
-            self.hashmap.remove(&setting);
+            self.settings.remove(&setting);
         }
     }
     fn mut_account_from_name(&mut self, name: &N) -> Option<&mut Self> {
@@ -1079,7 +1083,7 @@ impl<
     /// ```
     pub fn push_unchecked(&mut self, account: Self) {
         if account.active {
-            for setting in account.hashmap.keys() {
+            for setting in account.settings.keys() {
                 self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
@@ -1102,7 +1106,7 @@ impl<
     /// ```
     #[must_use]
     pub fn contains_key(&self, setting_name: &K) -> bool {
-        self.hashmap.contains_key(setting_name)
+        self.settings.contains_key(setting_name)
     }
     /// Returns the value corresponding to the key.
     ///
@@ -1120,7 +1124,7 @@ impl<
     #[must_use]
     #[allow(clippy::borrowed_box)]
     pub fn get(&self, setting_name: &K) -> Option<&V> {
-        self.hashmap.get(setting_name)
+        self.settings.get(setting_name)
     }
     /// Inserts a key-value pair into the map.
     ///
@@ -1148,7 +1152,7 @@ impl<
     /// assert!(account.hashmap()[&"a small number"] == 3);
     /// ```
     pub fn insert(&mut self, setting_name: K, setting_value: V) -> Option<V> {
-        self.hashmap.insert(setting_name, setting_value)
+        self.settings.insert(setting_name, setting_value)
     }
     /// An iterator visiting all keys in arbitrary order.
     /// The iterator element type is `&'a K`.
@@ -1182,7 +1186,7 @@ impl<
     /// instead of O(len) because it internally visits empty buckets too.
     #[must_use]
     pub fn keys(&self) -> hash_map::Keys<'_, K, V> {
-        self.hashmap.keys()
+        self.settings.keys()
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
@@ -1198,7 +1202,7 @@ impl<
     /// assert_eq!(account.remove(&"a small number"), None);
     /// ```
     pub fn remove(&mut self, setting_to_remove: &K) -> Option<V> {
-        self.hashmap.remove(setting_to_remove)
+        self.settings.remove(setting_to_remove)
     }
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
@@ -1287,7 +1291,7 @@ impl<
     /// ```
     #[must_use]
     pub fn capacity(&self) -> usize {
-        self.hashmap.capacity()
+        self.settings.capacity()
     }
     /// Returns the number of elements in the `Vec` of child `Accounts`,
     /// also referred to as its 'length'.
@@ -1384,7 +1388,7 @@ impl<
             return Some(error);
         }
         if account.active {
-            for setting in account.hashmap.keys() {
+            for setting in account.settings.keys() {
                 self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
@@ -1395,10 +1399,10 @@ impl<
     ///
     /// This method doesn't update the parent `Account` making it [invalid](Account#valid), so it's use
     /// is only recommend if multiple `Accounts` are being removed.
-    /// 
+    ///
     /// Use [pop](Account::pop) if you intend to update the settings from
     /// the main `Account` present on the popped child `Account`.
-    /// 
+    ///
     ///
     /// This method is a direct call to [`Vec`]'s [`pop()`](Vec::pop()).
     ///
@@ -1471,7 +1475,7 @@ impl<
         let popped_account = self.accounts.pop()?;
         for setting in popped_account.keys() {
             if !self.vec_contains_key(setting) {
-                self.hashmap.remove(setting);
+                self.settings.remove(setting);
             }
         }
         Some(popped_account)
@@ -1515,7 +1519,7 @@ impl<
         Self {
             name: N::default(),
             active: true,
-            hashmap: HashMap::default(),
+            settings: HashMap::default(),
             accounts: Vec::default(),
         }
     }
