@@ -118,7 +118,7 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 ///
 /// ```
-/// todo!(Account example)
+/// //todo!(Account example)
 /// ```
 ///
 ///
@@ -1604,13 +1604,13 @@ impl PartialEq for Box<dyn Setting> {
 /// Types implementing `Setting` can be turned into a `Stg` with [.stg()](Setting::stg).
 ///
 /// ```
-/// todo!(example)
+/// //todo!(example)
 /// ```
 ///
 /// They can be turned back to a specific type with [.unstg()](Stg::unstg) or [.unstg_panic()](Stg::unstg_panic)
 ///
 ///  ```
-/// todo!(example)
+/// //todo!(example)
 /// ```
 ///
 /// Additionally there is the [`StgTrait`] that can be implemented for types containing `Stg` to allow
@@ -1619,7 +1619,7 @@ impl PartialEq for Box<dyn Setting> {
 /// The main example would be [Option<&Stg>]
 ///
 ///  ```
-/// todo!(example)
+/// //todo!(example)
 /// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug)]
