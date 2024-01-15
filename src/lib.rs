@@ -77,7 +77,61 @@ use std::{
 };
 /// module containing types used internally by the crate
 pub mod types;
-use types::errors::{DeepError, InvalidAccountError, StgError};
+use types::errors::{DeepError, StgError};
+///todo!(doc)
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[must_use]
+pub struct Valid {
+    names: bool,
+    settings: bool,
+    children: bool,
+}
+impl Valid {
+    ///todo!(doc)
+    pub const fn new(names: bool, settings: bool, children: bool) -> Self {
+        Self {
+            names,
+            settings,
+            children,
+        }
+    }
+    ///todo!(doc)
+    #[must_use]
+    pub const fn is_valid(&self) -> bool {
+        self.children && self.settings && self.names
+    }
+    ///todo!(doc)
+    #[must_use]
+    pub const fn children(&self) -> bool {
+        self.children
+    }
+    ///todo!(doc)
+    #[must_use]
+    pub const fn settings(&self) -> bool {
+        self.settings
+    }
+    ///todo!(doc)
+    #[must_use]
+    pub const fn names(&self) -> bool {
+        self.names
+    }
+}
+impl Default for Valid {
+    fn default() -> Self {
+        Self {
+            names: true,
+            settings: true,
+            children: true,
+        }
+    }
+}
+
+///todo!(doc)
+pub trait Incrementable {
+    ///todo!(doc)
+    fn increment(&self) {}
+}
 
 /// A [`HashMap`] wrapper for layered settings.
 ///
@@ -200,7 +254,7 @@ use types::errors::{DeepError, InvalidAccountError, StgError};
 ///
 ///  - [`pop`](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 ///
-///  - [`pop_keep`](Account::pop_keep): `pop` but updates the settings in the main account unlike `pop`
+///  - [`pop_unchecked`](Account::pop_unchecked): `pop` but updates the settings in the main account unlike `pop`
 ///
 ///
 /// # [Valid](Account#valid)
@@ -256,6 +310,7 @@ pub struct Account<
     active: bool,
     settings: HashMap<K, V>,
     accounts: Vec<Account<N, K, V>>,
+    valid: Valid,
 }
 impl<
         N: Setting + Clone + Debug + Eq + Hash + Default,
@@ -308,12 +363,19 @@ impl<
     /// );
     ///
     /// ```
-    pub fn new(name: N, active: bool, settings: HashMap<K, V>, accounts: Vec<Self>) -> Self {
+    pub fn new_unchecked(
+        name: N,
+        active: bool,
+        settings: HashMap<K, V>,
+        accounts: Vec<Self>,
+        valid: Valid,
+    ) -> Self {
         Self {
             name,
             active,
             settings,
             accounts,
+            valid,
         }
     }
     /// Creates a new [valid](Account#valid) account
@@ -367,21 +429,16 @@ impl<
     /// );
     /// assert_eq!(account, Err(InvalidAccountError::ExistingName));
     /// ```
-    pub fn new_valid(
-        name: N,
-        active: bool,
-        settings: HashMap<K, V>,
-        accounts: Vec<Self>,
-    ) -> Result<Self, InvalidAccountError> {
-        let new_account = Self {
+    pub fn new(name: N, active: bool, settings: HashMap<K, V>, accounts: Vec<Self>) -> Self {
+        let mut new_account = Self {
             name,
             active,
             settings,
             accounts,
+            valid: Valid::default(),
         };
+        new_account.update_valid();
         new_account
-            .is_invalid()
-            .map_or_else(|| Ok(new_account), Err)
     }
     /// Returns a reference to a child `Account`.
     ///
@@ -437,7 +494,7 @@ impl<
                     //recursive call
                     Err(error) => match error {
                         DeepError::EmptyVec => Ok(found_account), //base case
-                        DeepError::NotFound => Err(error),        //error, invalid function call
+                        DeepError::NotFound => Err(error),        //error/bad function call
                     },
                     Ok(value) => Ok(value),
                 },
@@ -505,7 +562,7 @@ impl<
                     DeepError::EmptyVec => {
                         unreachable!() //Ok(found_account)
                     } //base case
-                    DeepError::NotFound => Err(error), //error, invalid function call
+                    DeepError::NotFound => Err(error), //error/bad function call
                 },
             }
         } else {
@@ -606,6 +663,7 @@ impl<
         new_name: N,
         account_names: &mut Vec<&N>,
     ) -> Result<N, DeepError> {
+        //todo!(make a validity check, auto fix if it's available)
         match self.deep_mut(account_names) {
             Ok(found_account) => Ok(found_account.rename(new_name)),
             Err(error) => Err(error),
@@ -854,7 +912,7 @@ impl<
                     DeepError::EmptyVec => {
                         Ok(found_account.insert(setting_name.to_owned(), setting_value))
                     } //base case
-                    DeepError::NotFound => Err(error), //error, invalid function call
+                    DeepError::NotFound => Err(error), //error/bad function call
                 },
             }
         } else {
@@ -940,7 +998,7 @@ impl<
                 }
                 Err(error) => match error {
                     DeepError::EmptyVec => Ok(found_account.remove(setting_to_remove)), //base case
-                    DeepError::NotFound => Err(error), //error, invalid function call
+                    DeepError::NotFound => Err(error), //error/bad function call
                 },
             }
         } else {
@@ -1237,6 +1295,8 @@ impl<
     /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
     /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
     ///
+    /// todo!() edit thing saying valid and invalid things that it updates and doesn't
+    ///
     /// # Panics
     ///
     /// Panics if the new capacity exceeds `isize::MAX` bytes.
@@ -1270,22 +1330,21 @@ impl<
     /// assert!(account.push(Account::new(3, Default::default(), Default::default(), Default::default()))
     ///     == Some(InvalidAccountError::ExistingName));
     /// ```
-    pub fn push(&mut self, account: Self) -> Option<InvalidAccountError> {
-        if self.accounts_names().contains(&account.name()) {
+    pub fn push(&mut self, account: Self) {
+        if self.valid.names && self.accounts_names().contains(&&account.name) {
             //check if account has the same name as a sibling account
-            return Some(InvalidAccountError::ExistingName);
+            self.valid.names = false;
         }
-        if let Some(error) = account.is_invalid() {
+        if self.valid.children && !account.valid.is_valid() {
             //check if Account is internally valid
-            return Some(error);
+            self.valid.children = false;
         }
         if account.active {
             for setting in account.settings.keys() {
                 self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
-        self.accounts.push(account);
-        None
+        self.accounts.push(account); //this is only pushed after so we can used a borrowed account to get the keys
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
@@ -1339,7 +1398,7 @@ impl<
     /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
     /// Will update the settings from the parent `Account` present on the popped child `Account`.
-    /// Consider using [pop_keep](Account::pop) if you are removing multiple child `Accounts`.
+    /// Consider using [pop_unchecked](Account::pop_unchecked) if you are removing multiple child `Accounts`.
     ///
     ///
     /// This method contains a call to [`Vec`]'s [`pop()`](Vec::pop()).
@@ -1371,12 +1430,17 @@ impl<
     ///     )
     /// )
     /// ```
-    pub fn pop(&mut self) -> std::option::Option<Self> {
+    pub fn pop(&mut self) -> Option<Self> {
         let popped_account = self.accounts.pop()?;
-        for setting in popped_account.keys() {
-            if !self.vec_contains_key(setting) {
-                self.settings.remove(setting);
-            }
+        self.update_vec(&popped_account.keys().collect());
+        if !self.valid.names() {
+            self.valid.names = self.check_valid_names();
+        }
+        if !self.valid.settings() {
+            self.valid.settings = self.check_valid_settings();
+        }
+        if !self.valid.names() {
+            self.valid.names = self.check_valid_names();
         }
         Some(popped_account)
     }
@@ -1405,7 +1469,7 @@ impl<
     ///         Account::new(3, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
-    /// account.pop_keep();
+    /// account.pop_unchecked();
     /// assert!(account ==
     ///     Account::<i32,(),()>::new(
     ///         Default::default(),
@@ -1418,31 +1482,100 @@ impl<
     ///     )
     /// )
     /// ```
-    pub fn pop_keep(&mut self) -> std::option::Option<Self> {
+    pub fn pop_unchecked(&mut self) -> std::option::Option<Self> {
         self.accounts.pop()
     }
-    ///todo!()
+    ///todo!(doc)
     #[must_use]
     pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Self> {
         self.accounts.get_mut(index)
     }
-    fn is_invalid(&self) -> Option<InvalidAccountError> {
+    ///todo!(doc)
+    pub fn update_valid(&mut self) {
+        self.valid.names = self.check_valid_names();
+        self.valid.children = self.check_valid_children();
+        self.valid.settings = self.check_valid_settings();
+    }
+    ///todo!(doc)
+    pub fn check_valid_children(&self) -> bool {
+        for account in self.accounts() {
+            if !account.valid.is_valid() {
+                return false;
+            }
+        }
+        true
+    }
+    ///todo!(doc)
+    pub fn check_valid_names(&self) -> bool {
         let accounts = self.accounts_names();
         let size = accounts.len();
         let mut hash_set = HashSet::with_capacity(size);
         for account in accounts {
             if !hash_set.insert(account) {
-                return Some(InvalidAccountError::ExistingName);
+                return false;
             }
         }
-        drop(hash_set); // dropping map here as it isn't needed anymore and being a recursive function the memory usage would keep increasing.
-                        //todo!() check if it's dropped automatically by the compiler.
+        true
+    }
+    ///todo!(doc)
+    pub fn check_valid_settings(&self) -> bool {
+        let mut hash_set = HashSet::new();
         for account in self.accounts() {
-            if let Some(error) = account.is_invalid() {
-                return Some(error);
+            if account.valid.settings() {
+                for setting in account.keys() {
+                    hash_set.insert(setting);
+                }
+            } else {
+                return false;
+            }
+        }
+        for setting in hash_set {
+            if self.find_in_accounts(setting) != self.get(setting) {
+                return false;
+            };
+        }
+        true
+    }
+    ///todo!(doc)
+    pub fn find_in_accounts(&self, setting: &K) -> Option<&V> {
+        for account in (0..self.len()).rev() {
+            if self.accounts[account].active {
+                if let Some(value) = self.accounts[account].settings.get(setting) {
+                    return Some(value);
+                }
             }
         }
         None
+    }
+    ///todo!(doc)
+    pub fn all_child_settings(&self) -> Vec<&K> {
+        let mut hash_set = HashSet::new();
+        for account in self.accounts() {
+            if account.valid.settings() {
+                for setting in account.keys() {
+                    hash_set.insert(setting);
+                }
+            }
+        }
+        hash_set.into_iter().collect()
+    }
+    ///todo!(doc)
+    pub const fn valid(&self) -> &Valid {
+        &self.valid
+    }
+    ///todo!(doc)
+    pub fn change_valid(&mut self, new_valid: Valid) -> bool {
+        let old_valid = self.valid;
+        self.valid = new_valid;
+        old_valid != Valid::default()
+    }
+    ///todo!(doc)
+    pub fn fix_account(&mut self){
+        todo!("add_functionality")
+    }
+    ///todo!(doc)
+    pub fn fix_account_names<>(&mut self){
+        todo!("add_functionality")
     }
     fn deep_change_activity_helper(
         &mut self,
@@ -1470,7 +1603,7 @@ impl<
                             .map(std::borrow::ToOwned::to_owned)
                             .collect::<Vec<_>>(),
                     ), //base case
-                    DeepError::NotFound => (Err(error), vec![]), //error, invalid function call
+                    DeepError::NotFound => (Err(error), vec![]), //error/bad function call
                 },
             }
         } else {
@@ -1493,8 +1626,8 @@ impl<
         }
         None
     }
-    #[must_use]
-    fn vec_contains_key(&self, setting: &K) -> bool {
+    ///todo!(doc)
+    pub fn vec_contains_key(&self, setting: &K) -> bool {
         for account in self.accounts() {
             if account.contains_key(setting) {
                 return true;
@@ -1529,6 +1662,7 @@ impl<
             active: true,
             settings: HashMap::default(),
             accounts: Vec::default(),
+            valid: Valid::default(),
         }
     }
 }
