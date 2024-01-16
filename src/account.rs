@@ -1542,10 +1542,7 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     }
 */
 
-impl<N, K, V> Default for Account<N, K, V>
-where
-    N: Default,
-{
+impl<N: Default, K, V> Default for Account<N, K, V> {
     fn default() -> Self {
         Self {
             name: N::default(),
@@ -1556,12 +1553,7 @@ where
         }
     }
 }
-impl<N, K, V> Clone for Account<N, K, V>
-where
-    N: Clone,
-    K: Clone,
-    V: Clone,
-{
+impl<N: Clone, K: Clone, V: Clone> Clone for Account<N, K, V> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
@@ -1572,12 +1564,7 @@ where
         }
     }
 }
-impl<N, K, V> Debug for Account<N, K, V>
-where
-    N: Debug,
-    K: Debug,
-    V: Debug,
-{
+impl<N: Debug, K: Debug, V: Debug> Debug for Account<N, K, V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Account")
             .field("name", &self.name)
@@ -1588,12 +1575,7 @@ where
             .finish()
     }
 }
-impl<N, K, V> PartialEq for Account<N, K, V>
-where
-    N: PartialEq,
-    K: Eq + Hash,
-    V: PartialEq,
-{
+impl<N: PartialEq, K: Eq + Hash, V: PartialEq> PartialEq for Account<N, K, V> {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
             && self.active == other.active
