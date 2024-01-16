@@ -3,6 +3,8 @@ use std::any::Any;
 
 use dyn_clone::DynClone;
 use dyn_ord::DynEq;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::types::errors::StgError;
 /// Required trait for conversion to abstract type [Stg]

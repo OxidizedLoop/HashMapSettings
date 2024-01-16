@@ -175,7 +175,7 @@ use crate::{setting::Setting, types::errors::DeepError};
 /// [deep_mut](Account::deep_mut) exists but it can make an Account [invalid](Account#valid)
 /// so its recommend to use the `deep` version of methods instead
 ///  
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[must_use]
 pub struct Account<N, K, V> {
     name: N,
@@ -1584,27 +1584,36 @@ impl<N: PartialEq, K: Eq + Hash, V: PartialEq> PartialEq for Account<N, K, V> {
             && self.valid == other.valid
     }
 }
-
-cfg_if::cfg_if! {
-    if #[cfg(serde)] {
-        #[cfg_attr(feature = "serde", typetag::serialize)]
-        impl<
-                N: Setting + Clone + Debug + PartialEq + Hash + Default + Serialize + for<'a> Deserialize<'a>,
-                K: Clone + Debug + PartialEq + Hash + 'static + Serialize + for<'a> Deserialize<'a>,
-                V: Clone + Debug + PartialEq + 'static + Serialize + for<'a> Deserialize<'a>,
-            > Setting for Account<N, K, V>
-        {
-            fn typetag_deserialize(&self) {
-                //todo!(figure what this is supposed to do as its not mut, and return "()")
-            }
-        }
-    }else{
-        impl<
-            N: Setting + Clone + Debug + PartialEq + Hash + Default,
-            K: Clone + Debug + PartialEq + Hash + 'static +Eq,
-            V: Clone + Debug + PartialEq + 'static,
-        > Setting for Account<N, K, V>{}
+#[cfg(feature = "serde")]
+impl<'de, N, K, V> Deserialize<'de> for Account<N, K, V> {
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        todo!()
     }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(feature = "serde", typetag::serialize)]
+impl<
+        N: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
+        K: Setting + Clone + Debug + Eq + Hash + Serialize + for<'a> Deserialize<'a>,
+        V: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
+    > Setting for Account<N, K, V>
+{
+    fn typetag_deserialize(&self) {
+        //todo!(figure what this is supposed to do as its not mut, and return "()")
+    }
+}
+
+#[cfg(not(feature = "serde"))]
+impl<
+        N: Setting + Clone + Debug + PartialEq,
+        K: Setting + Clone + Debug + Eq + Hash,
+        V: Setting + Clone + Debug + PartialEq,
+    > Setting for Account<N, K, V>
+{
 }
 
 ///todo!(doc)
