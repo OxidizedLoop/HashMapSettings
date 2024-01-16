@@ -176,25 +176,15 @@ use crate::{setting::Setting, types::errors::DeepError};
 /// so its recommend to use the `deep` version of methods instead
 ///  
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Debug, PartialEq)]
 #[must_use]
-pub struct Account<
-    N: Setting + Clone + Debug + Eq + Hash + Default,
-    K: Clone + Debug + Eq + Hash + 'static,
-    V: Clone + Debug + PartialEq + 'static,
-> {
+pub struct Account<N, K, V> {
     name: N,
     active: bool,
     settings: HashMap<K, V>,
     accounts: Vec<Account<N, K, V>>,
     valid: Valid,
 }
-impl<
-        N: Setting + Clone + Debug + Eq + Hash + Default,
-        K: Clone + Debug + Eq + Hash + 'static,
-        V: Clone + Debug + PartialEq + 'static,
-    > Account<N, K, V>
-{
+impl<N, K, V> Account<N, K, V> {
     /// Creates a new account
     ///
     /// The is no [validity](Account#valid) check, so the account created can be an invalid account.
@@ -255,6 +245,8 @@ impl<
             valid,
         }
     }
+}
+impl<N: Eq + Hash, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
     /// Creates a new [valid](Account#valid) account
     ///
     /// This lets you create an `Account` that is sure to be fully valid
@@ -317,6 +309,8 @@ impl<
         new_account.update_valid();
         new_account
     }
+}
+impl<N: PartialEq, K, V> Account<N, K, V> {
     /// Returns a reference to a child `Account`.
     ///
     /// `deep` can be used with other methods that don't need a `&mut self` (like
@@ -377,6 +371,8 @@ impl<
                 },
             )
     }
+}
+impl<N: PartialEq, K, V> Account<N, K, V> {
     /// Returns a mutable reference to a child `Account`.
     ///
     /// Consider using [`deep`](Account::deep) with methods that don't need a `&mut self`,
@@ -446,6 +442,8 @@ impl<
             Err(DeepError::NotFound)
         }
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Returns the name of the `Account`
     ///
     /// # Examples
@@ -465,6 +463,8 @@ impl<
     pub const fn name(&self) -> &N {
         &self.name
     }
+}
+impl<N: Clone, K, V> Account<N, K, V> {
     /// Takes a `&N` and updates the name of the `Account`.
     ///
     /// Returns the previous name that the Account had.
@@ -488,6 +488,8 @@ impl<
         self.name = new_name;
         r_value
     }
+}
+impl<N: Clone + PartialEq, K, V> Account<N, K, V> {
     /// Takes a `&N` and updates the name of a child `Account`.
     ///
     /// This can make a Account [invalid](Account#valid) if the child Account
@@ -546,6 +548,8 @@ impl<
             Err(error) => Err(error),
         }
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Return `true` if the `Account` is active
     ///
     /// When not active `Accounts` will be treated as if they were not there when called by some of the parent's `Account` methods.
@@ -567,6 +571,8 @@ impl<
     pub const fn active(&self) -> bool {
         self.active
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Takes a `bool` and changes the value of active, returns `true` if changes were made.
     ///
     /// # Examples
@@ -590,6 +596,8 @@ impl<
             true
         }
     }
+}
+impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Takes a `bool` and changes the value of active of a child `Account`.
     ///
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
@@ -645,6 +653,8 @@ impl<
         self.deep_change_activity_helper(new_active, account_names)
             .0
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Return a reference to the `HashMap`
     ///
     /// # Examples
@@ -676,6 +686,8 @@ impl<
     pub const fn hashmap(&self) -> &HashMap<K, V> {
         &self.settings
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// Returns the value corresponding to the key.
     ///
     /// This method is a direct call to [`HashMap`]'s [`get()`](HashMap::get).
@@ -694,6 +706,8 @@ impl<
     pub fn get(&self, setting_name: &K) -> Option<&V> {
         self.settings.get(setting_name)
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// Inserts a key-value pair into the map.
     ///
     /// If the map did not have this key present, `None` is returned.
@@ -722,6 +736,8 @@ impl<
     pub fn insert(&mut self, setting_name: K, setting_value: V) -> Option<V> {
         self.settings.insert(setting_name, setting_value)
     }
+}
+impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Inserts a key-value pair into the map of a child `Account`.
     ///
     /// This will updated the [settings](Account#settings) of all necessary Accounts
@@ -796,6 +812,8 @@ impl<
             Err(DeepError::NotFound)
         }
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
     /// This method is a direct call to [`HashMap`]'s [`remove()`](HashMap::remove).
@@ -812,6 +830,8 @@ impl<
     pub fn remove(&mut self, setting_to_remove: &K) -> Option<V> {
         self.settings.remove(setting_to_remove)
     }
+}
+impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Removes a setting from the map, returning the value at the key if the key was previously in the map.
     ///
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
@@ -882,6 +902,8 @@ impl<
             Err(DeepError::NotFound)
         }
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// An iterator visiting all keys in arbitrary order.
     /// The iterator element type is `&'a K`.
     ///
@@ -916,9 +938,11 @@ impl<
     pub fn keys(&self) -> hash_map::Keys<'_, K, V> {
         self.settings.keys()
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// Returns `true` if the `Account` contains a value for the specified key.
     ///
-    /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`Eq`] on the borrowed form must match those for the key type.
+    /// The key may be any borrowed form of the map’s key type, but [`Hash`] and [`PartialEq`] on the borrowed form must match those for the key type.
     ///
     /// This method is a direct call to [`HashMap`]'s [`contains_key()`](HashMap::contains_key()) .
     ///
@@ -935,6 +959,8 @@ impl<
     pub fn contains_key(&self, setting_name: &K) -> bool {
         self.settings.contains_key(setting_name)
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Returns the number of elements the map can hold without reallocating.
     ///
     /// This number is a lower bound; the `HashMap<K, V>` might be able to hold
@@ -954,6 +980,8 @@ impl<
     pub fn capacity(&self) -> usize {
         self.settings.capacity()
     }
+}
+impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// Updates a setting with the value its supposed to have.
     ///
     /// Returns `None` if the setting isn't present in the Account or child Accounts.
@@ -985,6 +1013,8 @@ impl<
         }
         self.settings.remove(setting).map(|_| true)
     }
+}
+impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Updates a setting with the value its supposed to have.
     ///
     /// This function doesn't return anything, consider using [update_setting_returns](Account::update_setting_returns)
@@ -1011,6 +1041,8 @@ impl<
         }
         self.settings.remove(setting);
     }
+}
+impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Updates a group of settings with the value they are supposed to have.
     ///
     /// If an Account is [valid](Account#valid) this wont do anything.
@@ -1036,6 +1068,8 @@ impl<
             self.settings.remove(*setting);
         }
     }
+}
+impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Updates all settings in the Account with the value they are supposed to have.
     ///
     /// If an Account is [valid](Account#valid) this wont do anything.
@@ -1066,6 +1100,8 @@ impl<
             self.settings.remove(&setting);
         }
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Return a reference to the `Vec` of child `Accounts`
     ///
     /// # Examples
@@ -1096,6 +1132,8 @@ impl<
     pub const fn accounts(&self) -> &Vec<Self> {
         &self.accounts
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Return a `Vec` of names of the child `Accounts`
     ///
     /// # Examples
@@ -1120,6 +1158,8 @@ impl<
     pub fn accounts_names(&self) -> Vec<&N> {
         self.accounts.iter().map(Self::name).collect()
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Returns the number of elements in the `Vec` of child `Accounts`,
     /// also referred to as its 'length'.
     ///
@@ -1145,6 +1185,8 @@ impl<
     pub fn len(&self) -> usize {
         self.accounts.len()
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Returns `true` if the `Vec` of child `Accounts` contains no elements.
     ///
     /// This method is a direct call to [`Vec`]'s [`is_empty()`](Vec::is_empty()).
@@ -1163,6 +1205,8 @@ impl<
     pub fn is_empty(&self) -> bool {
         self.accounts.is_empty()
     }
+}
+impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
     /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
@@ -1223,6 +1267,8 @@ impl<
         }
         self.accounts.push(account); //this is only pushed after so we can used a borrowed account to get the keys
     }
+}
+impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
     /// This child `Account` settings will be added to the settings of the parent `Account` that `push` was called on.
@@ -1272,6 +1318,8 @@ impl<
         }
         self.accounts.push(account);
     }
+}
+impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
     /// Will update the settings from the parent `Account` present on the popped child `Account`.
@@ -1321,6 +1369,8 @@ impl<
         }
         Some(popped_account)
     }
+}
+impl<N, K, V> Account<N, K, V> {
     /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
     /// This method doesn't update the parent `Account` making it [invalid](Account#valid), so it's use
@@ -1362,17 +1412,23 @@ impl<
     pub fn pop_unchecked(&mut self) -> std::option::Option<Self> {
         self.accounts.pop()
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     #[must_use]
     pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Self> {
         self.accounts.get_mut(index)
     }
+}
+impl<N: Eq + Hash, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
     ///todo!(doc)
     pub fn update_valid(&mut self) {
         self.valid.names = self.check_valid_names();
         self.valid.children = self.check_valid_children();
         self.valid.settings = self.check_valid_settings();
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn check_valid_children(&self) -> bool {
         for account in self.accounts() {
@@ -1382,6 +1438,8 @@ impl<
         }
         true
     }
+}
+impl<N: Eq + Hash, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn check_valid_names(&self) -> bool {
         let accounts = self.accounts_names();
@@ -1394,6 +1452,8 @@ impl<
         }
         true
     }
+}
+impl<N, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
     ///todo!(doc)
     pub fn check_valid_settings(&self) -> bool {
         let mut hash_set = HashSet::new();
@@ -1413,6 +1473,8 @@ impl<
         }
         true
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn find_in_accounts(&self, setting: &K) -> Option<&V> {
         for account in (0..self.len()).rev() {
@@ -1424,6 +1486,8 @@ impl<
         }
         None
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn all_child_settings(&self) -> Vec<&K> {
         let mut hash_set = HashSet::new();
@@ -1436,24 +1500,34 @@ impl<
         }
         hash_set.into_iter().collect()
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub const fn valid(&self) -> &Valid {
         &self.valid
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn change_valid(&mut self, new_valid: Valid) -> bool {
         let old_valid = self.valid;
         self.valid = new_valid;
         old_valid != Valid::default()
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn fix_account(&mut self) {
         todo!("add_functionality")
     }
+}
+impl<N, K, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn fix_account_names(&mut self) {
         todo!("add_functionality")
     }
+}
+impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     fn deep_change_activity_helper(
         &mut self,
         new_active: bool,
@@ -1487,6 +1561,8 @@ impl<
             (Err(DeepError::NotFound), vec![])
         }
     }
+}
+impl<N: PartialEq, K, V> Account<N, K, V> {
     fn account_from_name(&self, name: &N) -> Option<&Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
@@ -1495,6 +1571,8 @@ impl<
         }
         None
     }
+}
+impl<N: PartialEq, K, V> Account<N, K, V> {
     fn mut_account_from_name(&mut self, name: &N) -> Option<&mut Self> {
         for account in 0..self.len() {
             if self.accounts[account].name() == name {
@@ -1503,6 +1581,8 @@ impl<
         }
         None
     }
+}
+impl<N, K: Eq + Hash, V> Account<N, K, V> {
     ///todo!(doc)
     pub fn vec_contains_key(&self, setting: &K) -> bool {
         for account in self.accounts() {
@@ -1527,11 +1607,10 @@ impl<
         }
     */
 }
-impl<
-        N: Setting + Clone + Debug + Eq + Hash + Default,
-        K: Clone + Debug + Eq + Hash + 'static,
-        V: Clone + Debug + PartialEq + 'static,
-    > Default for Account<N, K, V>
+
+impl<N, K, V> Default for Account<N, K, V>
+where
+    N: Default,
 {
     fn default() -> Self {
         Self {
@@ -1543,13 +1622,59 @@ impl<
         }
     }
 }
+impl<N, K, V> Clone for Account<N, K, V>
+where
+    N: Clone,
+    K: Clone,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            active: self.active,
+            settings: self.settings.clone(),
+            accounts: self.accounts.clone(),
+            valid: self.valid,
+        }
+    }
+}
+impl<N, K, V> Debug for Account<N, K, V>
+where
+    N: Debug,
+    K: Debug,
+    V: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Account")
+            .field("name", &self.name)
+            .field("active", &self.active)
+            .field("settings", &self.settings)
+            .field("accounts", &self.accounts)
+            .field("valid", &self.valid)
+            .finish()
+    }
+}
+impl<N, K, V> PartialEq for Account<N, K, V>
+where
+    N: PartialEq,
+    K: Eq + Hash,
+    V: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.active == other.active
+            && self.settings == other.settings
+            && self.accounts == other.accounts
+            && self.valid == other.valid
+    }
+}
 
 cfg_if::cfg_if! {
     if #[cfg(serde)] {
         #[cfg_attr(feature = "serde", typetag::serialize)]
         impl<
-                N: Setting + Clone + Debug + Eq + Hash + Default + Serialize + for<'a> Deserialize<'a>,
-                K: Clone + Debug + Eq + Hash + 'static + Serialize + for<'a> Deserialize<'a>,
+                N: Setting + Clone + Debug + PartialEq + Hash + Default + Serialize + for<'a> Deserialize<'a>,
+                K: Clone + Debug + PartialEq + Hash + 'static + Serialize + for<'a> Deserialize<'a>,
                 V: Clone + Debug + PartialEq + 'static + Serialize + for<'a> Deserialize<'a>,
             > Setting for Account<N, K, V>
         {
@@ -1559,8 +1684,8 @@ cfg_if::cfg_if! {
         }
     }else{
         impl<
-            N: Setting + Clone + Debug + Eq + Hash + Default,
-            K: Clone + Debug + Eq + Hash + 'static,
+            N: Setting + Clone + Debug + PartialEq + Hash + Default,
+            K: Clone + Debug + PartialEq + Hash + 'static +Eq,
             V: Clone + Debug + PartialEq + 'static,
         > Setting for Account<N, K, V>{}
     }
@@ -1568,7 +1693,7 @@ cfg_if::cfg_if! {
 
 ///todo!(doc)
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[must_use]
 pub struct Valid {
     names: bool,
