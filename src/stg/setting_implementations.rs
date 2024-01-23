@@ -1,4 +1,4 @@
-use crate::Setting;
+use crate::stg::Setting;
 /*
 currently the types being added are the types that derive serde Deserialize per version 1.0.192
 https://docs.rs/serde/latest/serde/de/trait.Deserialize.html#
@@ -13,90 +13,90 @@ types that had some sort of lifetime error: str, std::path::Path, [u8], serde::d
 */
 
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::IpAddr{}
+impl Setting for std::net::IpAddr {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::SocketAddr{}
+impl Setting for std::net::SocketAddr {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for bool{}
+impl Setting for bool {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for char{}
+impl Setting for char {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for f32{}
+impl Setting for f32 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for f64{}
+impl Setting for f64 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for i8{}
+impl Setting for i8 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for i16{}
+impl Setting for i16 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for i32{}
+impl Setting for i32 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for i64{}
+impl Setting for i64 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for i128{}
+impl Setting for i128 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for isize{}
+impl Setting for isize {}
 /*
 impl Setting for !{}//Available on crate feature unstable only.
 */
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for u8{}
+impl Setting for u8 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for u16{}
+impl Setting for u16 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for u32{}
+impl Setting for u32 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for u64{}
+impl Setting for u64 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for u128{}
+impl Setting for u128 {}
 #[cfg_attr(feature = "serde", typetag::serde(name = "unit"))]
-impl Setting for (){}
+impl Setting for () {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for usize{}
+impl Setting for usize {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Box<str>{}//Available on crate features std or alloc only.{}
+impl Setting for Box<str> {} //Available on crate features std or alloc only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Box<std::ffi::CStr>{}//Available on crate features std or alloc only.{}
+impl Setting for Box<std::ffi::CStr> {} //Available on crate features std or alloc only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Box<std::ffi::OsStr>{}//Available on crate feature std and (Unix or Windows) only.{}
+impl Setting for Box<std::ffi::OsStr> {} //Available on crate feature std and (Unix or Windows) only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for Box<std::path::Path>{}
+impl Setting for Box<std::path::Path> {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::ffi::CString{}//Available on crate features std or alloc only.{}
+impl Setting for std::ffi::CString {} //Available on crate features std or alloc only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for String{}//Available on crate features std or alloc only.{}
+impl Setting for String {} //Available on crate features std or alloc only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::Ipv4Addr{}
+impl Setting for std::net::Ipv4Addr {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::Ipv6Addr{}
+impl Setting for std::net::Ipv6Addr {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::SocketAddrV4{}
+impl Setting for std::net::SocketAddrV4 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::net::SocketAddrV6{}
+impl Setting for std::net::SocketAddrV6 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroI8{}
+impl Setting for std::num::NonZeroI8 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroI16{}
+impl Setting for std::num::NonZeroI16 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroI32{}
+impl Setting for std::num::NonZeroI32 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroI64{}
+impl Setting for std::num::NonZeroI64 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroI128{}
+impl Setting for std::num::NonZeroI128 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroIsize{}
+impl Setting for std::num::NonZeroIsize {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroU8{}
+impl Setting for std::num::NonZeroU8 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroU16{}
+impl Setting for std::num::NonZeroU16 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroU32{}
+impl Setting for std::num::NonZeroU32 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroU64{}
+impl Setting for std::num::NonZeroU64 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroU128{}
+impl Setting for std::num::NonZeroU128 {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::num::NonZeroUsize{}
+impl Setting for std::num::NonZeroUsize {}
 /*
 impl Setting for std::sync::atomic::AtomicBool{}//Available on crate feature // std and target_has_atomic="8"
 impl Setting for std::sync::atomic::AtomicI8{}//Available on crate feature // std and target_has_atomic="8"
@@ -111,13 +111,13 @@ impl Setting for std::sync::atomic::AtomicU64{}//Available on crate feature // s
 impl Setting for std::sync::atomic::AtomicUsize{}//Available on crate feature // std and target_has_atomic="ptr"
 */
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::time::Duration{}
+impl Setting for std::time::Duration {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::ffi::OsString{}//Available on crate feature std and (Unix or Windows) only.{}
+impl Setting for std::ffi::OsString {} //Available on crate feature std and (Unix or Windows) only.{}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::path::PathBuf{}
+impl Setting for std::path::PathBuf {}
 #[cfg_attr(feature = "serde", typetag::serde)]
-impl Setting for std::time::SystemTime{}
+impl Setting for std::time::SystemTime {}
 /*
 impl<'a, T> Setting for std::borrow::Cow<'a, T>
 where
@@ -325,7 +325,10 @@ impl Setting for serde::de::IgnoredAny{}
 
 mod tests {
     #![allow(unused_imports)]
-    use crate::*;
+    use crate::{
+        stg::{Setting, Stg},
+        *,
+    };
     #[test]
     fn bool_stg_conversion() {
         let bool = true;
