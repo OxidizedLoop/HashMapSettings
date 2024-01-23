@@ -1,9 +1,9 @@
 //! `HashMap` wrapper for layered Settings of distinct types.
 //!
-//! This crate allows a developer to store and access all program settings on a [`Account`] struct,
-//! a wrapper around a [`HashMap`] that can hold any type that implements [`Setting`].
+//! This crate allows a developer to store and access all program settings on a [`Account`](crate::account::Account) struct,
+//! a wrapper around a [`HashMap`](std::collections::HashMap) that can hold any type that implements [`Setting`](crate::setting::Setting).
 //!```
-//!# use hashmap_settings::Setting;
+//!# use hashmap_settings::setting::Setting;
 //!# //use serde::{Deserialize, Serialize};
 //!# #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 //!# pub struct MyType{}
@@ -11,7 +11,7 @@
 //!impl Setting for MyType{}
 //! ```
 //!  
-//! An Account can also hold other [Accounts](Account#accounts), allowing the existence of layered settings.
+//! An Account can also hold other [Accounts](crate::account::Account#accounts), allowing the existence of layered settings.
 //!
 //! This makes it possible to create complex systems where multiple places
 //! (eg: Themes, Extensions, Global User Settings, Local User Settings)
@@ -33,16 +33,16 @@
 //!
 //! Add the following line to your .rs file:
 //!
-//! ```
+//! ```rust
 //! # #[allow(warnings)]
-//! use hashmap_settings::{Account};
+//! use hashmap_settings::account::Account;
 //! ```
 //!
 //! Basic use of an `Account` without layers:
 //!
 //! ```rust
 //! /*
-//! # use hashmap_settings::{Account};
+//! # use hashmap_settings::account::Account;
 //! //creating a basic account
 //! let mut account = Account::<(),&str>::default();
 //!
@@ -63,9 +63,9 @@
 //! ```
 
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
-///module containing account and valid types
+///module containing `Account`
 pub mod account;
-///stg mod
+///module containing the Stg type
 pub mod setting;
 /// module containing types used internally by the crate
 pub mod types;
@@ -76,8 +76,7 @@ mod tests {
 
     use crate::{
         account::Account,
-        setting::{Setting, Stg, StgTrait},
-        types::errors::StgError,
+        setting::{Setting, Stg, StgTrait,StgError},
     };
 
     #[test]

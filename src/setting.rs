@@ -6,7 +6,6 @@ use dyn_ord::DynEq;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::types::errors::StgError;
 /// Required trait for conversion to abstract type [Stg]
 ///
 /// For a Type to be able to implement Setting it needs to implement the traits
@@ -201,7 +200,7 @@ impl StgTrait for Option<&Stg> {
 ///
 /// #Example
 /// ```
-/// # use hashmap_settings::{account::Account,types::errors::StgError,setting::{Setting,Stg,StgTrait}};
+/// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait,StgError}};
 ///
 /// //creating a Stg Account
 /// let mut account = Account::<(), &str, Stg>::default();
@@ -242,7 +241,7 @@ pub trait StgTrait {
     /// # Examples
     ///
     /// ```
-    /// # use hashmap_settings::{account::Account,types::errors::StgError,setting::{Setting,Stg,StgTrait}};
+    /// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait,StgError}};
     /// let mut account: Account<(),&str,Stg> = Default::default();
     /// account.insert("a small number", 42_i32.stg());
     /// assert_eq!(account.get(&"a small number").unstg::<i32>(), Ok(42));
@@ -272,4 +271,13 @@ pub trait StgTrait {
     /// ```
     #[must_use]
     fn unstg_panic<S: Setting>(self) -> S;
+}
+
+/// Errors for [Stg] and [StgTrait] methods
+#[derive(Debug, PartialEq, Eq)]
+pub enum StgError {
+    /// No value found, equivalent to None in Option()
+    None,
+    /// Error of trying to  convert to the wrong type, todo!()Err(Box<dyn Any>), result from calling the if we try to covert to the wrong type
+    WrongType,
 }

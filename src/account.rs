@@ -8,7 +8,7 @@ use std::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{setting::Setting, types::errors::DeepError};
+use crate::setting::Setting;
 
 /// A [`HashMap`] wrapper for layered settings.
 ///
@@ -635,7 +635,7 @@ impl<N: PartialEq, K, V> Account<N, K, V> {
     /// );
     ///
     /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&42));
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep(&self, account_names: &mut Vec<&N>) -> Result<&Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -696,7 +696,7 @@ impl<N: PartialEq, K, V> Account<N, K, V> {
     /// );
     /// assert_eq!(account.deep_mut(&mut vec![&"3_2".to_string(),&"3".to_string()])?.insert("answer".to_string(), 777), Some(42));
     /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&777));
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep_mut(&mut self, account_names: &mut Vec<&N>) -> Result<&mut Self, DeepError> {
         let Some(account_to_find) = account_names.pop() else {
@@ -1113,7 +1113,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// assert_eq!(account.deep_insert(&"answer".to_string(), 777, &mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
     /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"answer".to_string()), Some(&777));
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep_insert(
         &mut self,
@@ -1190,7 +1190,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// assert_eq!(account.deep_remove(&"answer".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok(Some(42)));
     /// assert_eq!(account.deep(&mut vec![&"3_2".to_string(),&"3".to_string()])?.get(&"int".to_string()), None);
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep_remove(
         &mut self,
@@ -1469,7 +1469,7 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     /// );
     ///
     ///
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep_pop(
         &mut self,
@@ -1707,7 +1707,7 @@ impl<
     /// );
     ///
     ///
-    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// # Ok::<(), hashmap_settings::account::DeepError>(())
     /// ```
     pub fn deep_push(
         &mut self,
@@ -2044,4 +2044,13 @@ impl Incrementable for String {
     fn increment(&self) -> Self {
         self.to_owned() + "(1)" //todo!(incrementable)
     }
+}
+
+/// Errors involving [Deep Functions](Account#deep-functions)
+#[derive(Debug, PartialEq, Eq)]
+pub enum DeepError {
+    /// Error of providing a name of a [child](Account#accounts) Account that doesn't exist
+    NotFound,
+    /// Error of providing a empty `Vec` to a deep function
+    EmptyVec,
 }
