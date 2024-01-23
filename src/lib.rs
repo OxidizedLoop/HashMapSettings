@@ -3,7 +3,7 @@
 //! This crate allows a developer to store and access all program settings on a [`Account`](crate::account::Account) struct,
 //! a wrapper around a [`HashMap`](std::collections::HashMap) that can hold any type that implements [`Setting`](crate::setting::Setting).
 //!```
-//!# use hashmap_settings::setting::Setting;
+//!# use hashmap_settings::stg::Setting;
 //!# //use serde::{Deserialize, Serialize};
 //!# #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 //!# pub struct MyType{}
