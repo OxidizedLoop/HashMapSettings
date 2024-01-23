@@ -1,4 +1,4 @@
-use core::fmt::Debug;
+use core::{fmt::Debug, mem::replace};
 use std::{
     collections::{hash_map, HashMap, HashSet},
     hash::Hash,
@@ -12,7 +12,7 @@ use crate::{setting::Setting, types::errors::DeepError};
 
 /// A [`HashMap`] wrapper for layered settings.
 ///
-/// The [`Stg`] type is a type abstraction that can be used to to have an `Account` with distinct types.
+/// The [`Stg`](crate::stg::Stg) type is a type abstraction that can be used to to have an `Account` with distinct types.
 ///
 /// An `Account<N,K,S>` can also hold other [Accounts](Account#accounts). This allows for complex systems where
 /// an app can have multiple layers of settings. The top most layer being the first one to be searched
@@ -29,41 +29,37 @@ use crate::{setting::Setting, types::errors::DeepError};
 ///
 ///  - [settings](Account#settings): A [`HashMap`]<`K`,`V`>,
 ///
-///  - [accounts](Account#accounts): A [`Vec`]<`Account`>, of sub Accounts
+///  - [accounts](Account#accounts): A [`Vec`]<`Account`>, of sub `Accounts`
+///
+///  - [valid](Account#valid): A [`Valid`] the `Account's` validity tracker
 ///
 ///
 /// # New Account
 ///
 ///
-/// Currently a new Account can be created with:
+/// A new Account can be created with:
 ///  - [`new`](Account::new): Create a new Account.
 ///
-///  - [`new_valid`](Account::new_valid): Create a new Account that is [valid](Account#valid).
+///  - [`new_unchecked`](Account::new_unchecked): Creates a new account without verifying its validity.
 ///
 ///  - [`clone`][Clone::clone]: Clone an existing Account.
 ///
 /// An `AccountBuilder` is planned to be created in the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20).
-///
-/// It's recommend that parent `Accounts` are made with [new_valid](Account::new_valid) but
-/// [child Accounts](Accounts#accounts) are made with with [new](Account::new) to avoid repeated validity checks.
-///
-///
-/// ```
-/// //todo!(Account example)
-/// ```
 ///
 ///
 /// # [Name](Account#name)
 ///
 ///
 /// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`.
-/// For this reason child `Accounts` need to be uniquely named to be [valid](Account#valid).
+///
+/// For this reason child `Accounts` need to be uniquely named for the parent `Account` to be [valid](Account#valid).
+///
 ///
 ///  - [`name`](Account::name): Get an account's name
 ///
 ///  - [`rename`](Account::rename): Rename an `Account`
 ///
-///  - [`deep_rename`](Account::deep_rename): Rename a [child](Account#accounts)  `Account`
+///  - [`deep_rename`](Account::deep_rename): Rename a [child](Account#accounts) `Account`
 ///
 ///
 /// # [Active](Account#active)
@@ -127,11 +123,11 @@ use crate::{setting::Setting, types::errors::DeepError};
 ///
 ///  - [`push`](Account::push): Appends an `Account` to the back of the `Vec`.
 ///
-///  - [`push_unchecked`](Account::push_unchecked): `push` but an invalid `Account` can be pushed.
+///  - [`deep_push`](Account::deep_push): Appends an `Account` to the back of the `Vec`of a child `Account`.
 ///
 ///  - [`pop`](Account::pop): Removes the last element from a vector and returns it, or [`None`] if it is empty.
 ///
-///  - [`pop_unchecked`](Account::pop_unchecked): `pop` but updates the settings in the main account unlike `pop`
+///  - [`deep_pop`](Account::deep_pop): Removes the last element from a vector of a child `Account`
 ///
 ///
 /// # [Valid](Account#valid)
@@ -143,18 +139,33 @@ use crate::{setting::Setting, types::errors::DeepError};
 ///
 /// If a method can make an `Account` invalid it will be mentioned.
 ///
-/// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/20) in should be made into a `Account` field
 ///
 /// ## Validity Defined:
-/// For an `Account` to be valid it needs to follow the following requirements:
 ///
-///  - It's child `Accounts` are valid.
 ///
-///  - It's child `Accounts` have unique names.
+/// `Account` contains a valid field of type [`Valid`] that tracks if an `Account` is valid.
 ///
-/// It's NOT yet implemented but it's intended that the following are also true:
+/// `Valid` contains 3 `bool` fields corresponding to the 3 ways an account can be invalid:
 ///
-///  - The `Account` contains all settings in the child `Accounts`.
+/// names: An `Account` is invalid if it's children `Accounts` have duplicated names.
+///
+/// settings: An `Account` is invalid if it doesn't contain all settings present in it's children `Accounts`.
+///
+/// accounts: An `Account` is invalid if it's children `Accounts` are themselves invalid.
+///
+/// If all the fields are true then the `Account` is valid.
+///
+/// An Account can be temporary made invalid  for either efficiency (using [push](Account::push) or [pop](Account::pop) repeatedly) 
+/// or while using [deep_mut](Account::deep_mut) for something that isn't covered by the other [deep functions](Account#deep-functions).
+/// But this should be fixed by 
+///
+/// -[valid](Account::valid): Returns a reference to the `Account` `valid` field.
+///
+/// -[update_valid](Account::update_valid): Updates `valid` to the values it's supposed to have.
+///
+/// -[change_valid](Account::change_valid): Changes the `valid` to a the provided `Valid`
+///
+/// -[fix_valid](Account::fix_valid): Makes an invalid Account valid
 ///
 ///
 /// # [Deep Functions](Account#deep-functions)
@@ -186,19 +197,19 @@ pub struct Account<N, K, V> {
 }
 
 impl<N, K, V> Account<N, K, V> {
-    /// Creates a new account
+    /// Creates a new account without verifying its validity
     ///
     /// The is no [validity](Account#valid) check, so the account created can be an invalid account.
-    /// Use [`new_valid`](Account::new_valid) to make sure that the account created is valid.
+    /// Use [`new`](Account::new) to make sure that the account created is valid.
     ///
-    /// It's recommend that the parent `Accounts` are made with [`new_valid`](Account::new_valid)
-    /// but child `Accounts` are made with with `new` to avoid repeated validity checks.
+    /// It's recommend that the parent `Accounts` are made with [`new`](Account::new)
+    /// but child `Accounts` are made with with `new_unchecked`.
     ///
     /// # Example
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account};
-    /// let account = Account::new(
+    /// use hashmap_settings::account::*;
+    /// let account = Account::new_unchecked(
     ///     "New Account".to_string(),
     ///     true,
     ///     HashMap::from([
@@ -211,6 +222,7 @@ impl<N, K, V> Account<N, K, V> {
     ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
     ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
+    ///     Valid::new(true,true,true),
     /// );
     ///
     /// assert_eq!(account.name(), "New Account");
@@ -228,6 +240,9 @@ impl<N, K, V> Account<N, K, V> {
     ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
     ///         Account::new("3".to_string(), true, Default::default(), Default::default())
     ///     ],
+    /// );
+    /// assert!(account.valid() ==
+    ///     &Valid::new(true,true,true)
     /// );
     ///
     /// ```
@@ -251,7 +266,7 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let account = Account::<String,(),()>::new(
     ///     "New account".to_string(),
     ///     Default::default(),
@@ -274,8 +289,8 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),(),()>::new(Default::default(), true, Default::default(), Default::default());
+    /// use hashmap_settings::account::Account;
+    /// let mut account = Account::<String,(),()>::new(Default::default(), true, Default::default(), Default::default());
     ///
     /// assert!(account.active());
     /// account.change_activity(false);
@@ -291,8 +306,8 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),(),()>::new(Default::default(), false, Default::default(), Default::default());
+    /// use hashmap_settings::account::Account;
+    /// let mut account = Account::<String,(),()>::new(Default::default(), false, Default::default(), Default::default());
     ///
     /// assert!(!account.active());
     /// assert_eq!(account.change_activity(true), true);
@@ -314,7 +329,7 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// use std::collections::HashMap;
     /// let account = Account::<String,String,i32>::new(
     ///     "New Account".to_string(),
@@ -348,9 +363,9 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// use std::collections::HashMap;
-    /// let account = Account::<(),String,i32>::new(
+    /// let account = Account::<String,String,i32>::new(
     ///     Default::default(),
     ///     Default::default(),
     ///     HashMap::from([
@@ -384,9 +399,9 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// use std::collections::HashMap;
-    /// let account = Account::<(),(),()>::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
+    /// let account = Account::<String,(),()>::new(Default::default(), Default::default(), HashMap::with_capacity(100), Default::default());
     /// assert!(account.capacity() >= 100);
     /// ```
     #[must_use]
@@ -398,7 +413,7 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let account = Account::<i32,(),()>::new(
     ///     0,
     ///     Default::default(),
@@ -428,7 +443,7 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let account = Account::<String,(),()>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
@@ -455,7 +470,7 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::Account;
+    /// use hashmap_settings::account::Account;
     /// let account = Account::<i32,(),()>::new(
     ///         Default::default(),
     ///         Default::default(),
@@ -479,65 +494,28 @@ impl<N, K, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<(),(),()>::default();
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let mut account = Account::<String,(),()>::default();
     /// assert!(account.is_empty());
     ///
-    /// account.push(Account::<(),(),()>::default());
+    /// account.push(Account::<String,(),()>::default(), Valid::new_true());
     /// assert!(!account.is_empty());
     /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.accounts.is_empty()
     }
-    /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
-    ///
-    /// This method doesn't update the parent `Account` making it [invalid](Account#valid), so it's use
-    /// is only recommend if multiple `Accounts` are being removed.
-    ///
-    /// Use [pop](Account::pop) if you intend to update the settings from
-    /// the main `Account` present on the popped child `Account`.
-    ///
-    ///
-    /// This method is a direct call to [`Vec`]'s [`pop()`](Vec::pop()).
-    ///
+    /// Returns a mutable reference to a child `Account`
+    ///  
     /// # Examples
-    ///
     /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<i32,(),()>::new(
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///         Account::new(2, Default::default(), Default::default(), Default::default()),
-    ///         Account::new(3, Default::default(), Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// account.pop_unchecked();
-    /// assert!(account ==
-    ///     Account::<i32,(),()>::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///             Account::new(2, Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     )
-    /// )
+    ///  //TODO(Example)
     /// ```
-    pub fn pop_unchecked(&mut self) -> std::option::Option<Self> {
-        self.accounts.pop()
-    }
-    ///todo!(doc)
     #[must_use]
     pub fn get_mut_account(&mut self, index: usize) -> Option<&mut Self> {
         self.accounts.get_mut(index)
     }
-    ///todo!(doc)
-    pub fn check_valid_children(&self) -> bool {
+    fn update_valid_children(&self) -> bool {
         for account in self.accounts() {
             if !account.valid.is_valid() {
                 return false;
@@ -545,34 +523,49 @@ impl<N, K, V> Account<N, K, V> {
         }
         true
     }
-    ///todo!(doc)
+    /// Returns a reference to the `Account`'s [Valid].
+    ///
+    /// Check [valid](Account#valid)
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let account = Account::<(),(),()>::default();
+    /// assert_eq!(account.valid(),&Valid::new(true,true,true));
+    /// ```
     pub const fn valid(&self) -> &Valid {
         &self.valid
     }
-    ///todo!(doc)
+    /// Change `Account`'s [Valid] to the provided value.
+    ///
+    /// Returns `true` if new value is different than the previous one.
+    ///
+    /// This method (along with [update_valid](Account::update_valid)) is intended to be used with methods that
+    /// can make an account [invalid](Account#valid) to correctly update they values for a future use of
+    /// [fix_valid](Account::fix_valid).
+    ///
+    ///  `change_valid` can make an account [invalid](Account#valid) if improperly used.
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let mut account = Account::<(),(),()>::default();
+    /// assert_eq!(account.valid(),&Valid::new(true,true,true));
+    /// assert_eq!(account.change_valid(Valid::new(true,true,true)),false);
+    /// assert_eq!(account.change_valid(Valid::new(false,true,true)),true);
+    /// assert_eq!(account.valid(),&Valid::new(false,true,true));
+    /// ```
     pub fn change_valid(&mut self, new_valid: Valid) -> bool {
-        let old_valid = self.valid;
-        self.valid = new_valid;
-        old_valid != Valid::default()
+        new_valid != replace(&mut self.valid, new_valid)
     }
-    ///todo!(doc)
-    pub fn fix_account(&mut self) {
-        todo!("add_functionality")
-    }
-    ///todo!(doc)
-    pub fn fix_account_names(&mut self) {
-        todo!("add_functionality")
-    }
-}
-impl<N: Clone, K, V> Account<N, K, V> {
-    /// Takes a `&N` and updates the name of the `Account`.
+    /// Takes a `N` and updates the name of the `Account`.
     ///
     /// Returns the previous name that the Account had.
     ///
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account = Account::<String,(),()>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
@@ -584,14 +577,11 @@ impl<N: Clone, K, V> Account<N, K, V> {
     /// assert_eq!(account.name(), "New Name");
     /// ```
     pub fn rename(&mut self, new_name: N) -> N {
-        let r_value = self.name.clone(); //todo!(there should be a way to take the new value without cloning)
-        self.name = new_name;
-        r_value
+        core::mem::replace(&mut self.name, new_name)
     }
 }
 impl<N: Eq + Hash, K, V> Account<N, K, V> {
-    ///todo!(doc)
-    pub fn check_valid_names(&self) -> bool {
+    fn update_valid_names(&self) -> bool {
         let accounts = self.accounts_names();
         let size = accounts.len();
         let mut hash_set = HashSet::with_capacity(size);
@@ -620,7 +610,7 @@ impl<N: PartialEq, K, V> Account<N, K, V> {
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let account = Account::<String,String,i32>::new(
     ///     "Parent Account".to_string(),
     ///     Default::default(),
@@ -668,7 +658,7 @@ impl<N: PartialEq, K, V> Account<N, K, V> {
     ///
     /// Consider using [`deep`](Account::deep) with methods that don't need a `&mut self`,
     /// or the respective [deep_function](Account#deep-functions) for a specific method as
-    /// `deep_mut` can make an account [invalid])(Account#valid)
+    /// `deep_mut` can make an account [invalid](Account#valid)
     ///
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function.
@@ -681,7 +671,7 @@ impl<N: PartialEq, K, V> Account<N, K, V> {
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
@@ -758,7 +748,7 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account: Account<(),&str,i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.get(&"a small number"), Some(&42));
@@ -785,7 +775,7 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account: Account<(),&str,i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
     /// assert_eq!(account.hashmap().is_empty(), false);
@@ -804,7 +794,7 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account: Account<(),&str,i32> = Default::default();
     /// assert_eq!(account.insert("a small number", 1), None);
     /// assert_eq!(account.remove(&"a small number"), Some(1));
@@ -822,7 +812,7 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account: Account<(),&str,i32> = Default::default();
     /// account.insert("a small number", 42);
     /// assert_eq!(account.contains_key(&"a small number"), true);
@@ -832,8 +822,7 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     pub fn contains_key(&self, setting_name: &K) -> bool {
         self.settings.contains_key(setting_name)
     }
-    ///todo!(doc)
-    pub fn find_in_accounts(&self, setting: &K) -> Option<&V> {
+    fn get_in_sub_accounts(&self, setting: &K) -> Option<&V> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
                 if let Some(value) = self.accounts[account].settings.get(setting) {
@@ -843,103 +832,22 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
         }
         None
     }
-    ///todo!(doc)
-    pub fn all_child_settings(&self) -> Vec<&K> {
-        let mut hash_set = HashSet::new();
-        for account in self.accounts() {
-            if account.valid.settings() {
-                for setting in account.keys() {
-                    hash_set.insert(setting);
-                }
-            }
-        }
-        hash_set.into_iter().collect()
-    }
-    ///todo!(doc)
-    pub fn vec_contains_key(&self, setting: &K) -> bool {
-        for account in self.accounts() {
-            if account.contains_key(setting) {
-                return true;
-            }
-        }
-        false
-    }
-}
-impl<N: Clone + PartialEq, K, V> Account<N, K, V> {
-    /// Takes a `&N` and updates the name of a child `Account`.
-    ///
-    /// This can make a Account [invalid](Account#valid) if the child Account
-    /// got renamed to the same name as one of it's siblings.
-    ///
-    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
-    /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
-    ///
-    /// # Errors
-    ///
-    /// Deep functions can return [`DeepError`]'s
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<String,(),()>::new(
-    ///     "Old Name".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("3".to_string(), true, Default::default(), vec![
-    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
-    ///             Account::new("3_2".to_string(), true, Default::default(), Default::default()),
-    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
-    ///         ])
-    ///     ],
-    /// );
-    ///
-    /// assert_eq!(account.deep_rename("Cool Name".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok("3_2".to_string()));
-    /// assert_eq!(account, Account::new(
-    ///     "Old Name".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("3".to_string(), true, Default::default(), vec![
-    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
-    ///             Account::new("Cool Name".to_string(), true, Default::default(), Default::default()),
-    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
-    ///         ])
-    ///     ],
-    /// ));
-    /// ```
-    pub fn deep_rename(
-        &mut self,
-        new_name: N,
-        account_names: &mut Vec<&N>,
-    ) -> Result<N, DeepError> {
-        //todo!(make a validity check, auto fix if it's available)
-        match self.deep_mut(account_names) {
-            Ok(found_account) => Ok(found_account.rename(new_name)),
-            Err(error) => Err(error),
-        }
-    }
 }
 impl<N, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
-    ///todo!(doc)
-    pub fn check_valid_settings(&self) -> bool {
+    fn update_valid_settings(&self) -> bool {
         let mut hash_set = HashSet::new();
         for account in self.accounts() {
-            if account.valid.settings() {
+            if !account.valid.settings() {
+                return false;
+            }
+            if account.active {
                 for setting in account.keys() {
                     hash_set.insert(setting);
                 }
-            } else {
-                return false;
             }
         }
         for setting in hash_set {
-            if self.find_in_accounts(setting) != self.get(setting) {
+            if self.get_in_sub_accounts(setting) != self.get(setting) {
                 return false;
             };
         }
@@ -960,7 +868,7 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// # Examples
     /// ```
-    ///  //todo!() add example
+    ///  //TODO(Example)
     /// ```
     pub fn update_setting(&mut self, setting: &K) {
         for account in (0..self.len()).rev() {
@@ -983,7 +891,7 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// # Examples
     /// ```
-    ///  //todo!() add example
+    ///  //TODO(Example)
     /// ```
     pub fn update_vec(&mut self, settings: &Vec<&K>) {
         'setting: for setting in settings {
@@ -1008,7 +916,7 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// # Examples
     /// ```
-    ///  //todo!() add example
+    ///  //TODO(Example)
     /// ```
     pub fn update_all_settings(&mut self) {
         let settings = self
@@ -1028,124 +936,83 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
             self.settings.remove(&setting);
         }
     }
-    /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
-    ///
-    /// This child `Account` settings will be added to the settings of the parent `Account` that `push` was called on.
-    ///
-    /// The parent Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
-    ///
-    /// Won't return an error if the child `Account` being pushed is [invalid](Account#valid)
-    /// but will cause unintended behavior for future calls to the main `Account`.
-    /// Use [push](Account::push) if the Account might be [invalid](Account#valid).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the new capacity exceeds `isize::MAX` bytes.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account};
-    /// let mut account = Account::<i32,(),()>::new(
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///         Account::new(2, Default::default(), Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// account.push_unchecked(Account::new(3, Default::default(), Default::default(), Default::default()));
-    /// assert!(account ==
-    ///     Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
-    ///             Account::new(3, Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     )
-    /// )
-    /// ```
-    pub fn push_unchecked(&mut self, account: Self) {
-        if account.active {
-            for setting in account.settings.keys() {
-                self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
+    fn fix_valid_settings(&mut self) {
+        for account in &mut self.accounts {
+            //fix child Accounts
+            if !account.valid.settings {
+                account.fix_valid_settings();
             }
         }
-        self.accounts.push(account);
+        let mut all_settings = HashSet::new();
+        for account in self.accounts() {
+            //get set off all settings
+            if account.active {
+                for setting in account.keys() {
+                    all_settings.insert(setting.clone());
+                }
+            }
+        }
+        'setting: for setting in all_settings {
+            //update settings on self account
+            for account in (0..self.len()).rev() {
+                if self.accounts[account].active {
+                    if let Some(value) = self.accounts[account].settings.get(&setting) {
+                        self.settings.insert(setting, value.clone());
+                        continue 'setting;
+                    }
+                }
+            }
+        }
+        self.valid.settings = true;
     }
 }
 impl<N: Eq + Hash, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
-    /// Creates a new [valid](Account#valid) account
+    /// Updates `valid` to the values it's supposed to have.
     ///
-    /// This lets you create an `Account` that is sure to be fully valid
-    /// including it's child `Accounts` or an error is returned.
+    /// This method takes a [Valid], updating the `Account`'s [Valid] accordingly.
     ///
-    /// It's recommend that parent `Accounts` are made with `new_valid` but child
-    /// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
-    ///
+    /// This method (along with [change_valid](Account::change_valid)) is intended to be used with methods that
+    /// can make an account [invalid](Account#valid) to correctly update they values for a future use of
+    /// [fix_valid](Account::fix_valid).
+    ///  
     /// # Examples
-    ///
     /// ```
-    /// use hashmap_settings::Account;
-    /// let account = Account::<String,(),()>::new_valid(
-    ///     "New Account".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// assert_eq!(account, Ok(Account::<String,(),()>::new(
-    ///     "New Account".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
-    ///     ],
-    /// )));
+    ///  //TODO(Example)
     /// ```
-    ///
-    /// # Errors
-    ///
-    /// ```
-    /// use hashmap_settings::types::errors::InvalidAccountError;
-    /// use hashmap_settings::Account;
-    /// let account = Account::<String,(),()>::new_valid(
-    ///     "New Account".to_string(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
-    ///         Account::new("1".to_string(), true, Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// assert_eq!(account, Err(InvalidAccountError::ExistingName));
-    /// ```
-    pub fn new(name: N, active: bool, settings: HashMap<K, V>, accounts: Vec<Self>) -> Self {
-        let mut new_account = Self {
-            name,
-            active,
-            settings,
-            accounts,
-            valid: Valid::default(),
-        };
-        new_account.update_valid();
-        new_account
+    pub fn update_valid(&mut self, valid: Valid) {
+        if valid.names {
+            self.valid.names = self.update_valid_names();
+        }
+        if valid.children {
+            self.valid.children = self.update_valid_children();
+        }
+        if valid.settings {
+            self.valid.settings = self.update_valid_settings();
+        }
     }
-    ///todo!(doc)
-    pub fn update_valid(&mut self) {
-        self.valid.names = self.check_valid_names();
-        self.valid.children = self.check_valid_children();
-        self.valid.settings = self.check_valid_settings();
+}
+impl<N: Clone + Eq + Hash + Incrementable, K, V> Account<N, K, V> {
+    fn fix_valid_names(&mut self) {
+        //todo!(performance needs to be improved)
+        let size = self.accounts.len();
+        let mut hash_set = HashSet::with_capacity(size);
+        let mut vec_names: Vec<(N, usize)> = vec![];
+        for account in 0..size {
+            if !hash_set.insert(self.accounts[account].name.clone()) {
+                vec_names.push((self.accounts[account].name.clone(), account));
+            }
+        }
+        for name in &mut vec_names {
+            name.0.increment_mut();
+            'looping: loop {
+                if hash_set.insert(name.0.clone()) {
+                    self.accounts[name.1].name = name.0.clone();
+                    break 'looping;
+                }
+                name.0.increment_mut();
+            }
+        }
+        self.valid.names = true;
     }
 }
 impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
@@ -1164,7 +1031,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account = Account::<String,(),()>::new(
     ///     "New Account".to_string(),
     ///     Default::default(),
@@ -1220,7 +1087,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
@@ -1259,7 +1126,11 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
         };
         #[allow(clippy::option_if_let_else)]
         if let Some(found_account) = self.mut_account_from_name(account_to_find) {
-            match found_account.deep_insert(setting_name, setting_value.clone(), account_names) {
+            if account_names.is_empty() {
+                //this and the unreachable()! have been added to prevent a .clone() on setting_value
+                return Ok(found_account.insert(setting_name.to_owned(), setting_value));
+            }
+            match found_account.deep_insert(setting_name, setting_value, account_names) {
                 //recursive call
                 Ok(insert_option) => {
                     self.update_setting(setting_name);
@@ -1269,7 +1140,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
                 }
                 Err(error) => match error {
                     DeepError::EmptyVec => {
-                        Ok(found_account.insert(setting_name.to_owned(), setting_value))
+                        unreachable!()
                     } //base case
                     DeepError::NotFound => Err(error), //error/bad function call
                 },
@@ -1293,7 +1164,7 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     ///
     /// ```
     /// use std::collections::HashMap;
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::Account;
     /// let mut account = Account::<String,String,i32>::new(
     ///     "Old Name".to_string(),
     ///     Default::default(),
@@ -1348,66 +1219,6 @@ impl<N: PartialEq, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
             Err(DeepError::NotFound)
         }
     }
-    /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
-    ///
-    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
-    ///
-    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
-    ///
-    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
-    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
-    ///
-    /// todo!() edit thing saying valid and invalid things that it updates and doesn't
-    ///
-    /// # Panics
-    ///
-    /// Panics if the new capacity exceeds `isize::MAX` bytes.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use hashmap_settings::{Account,types::errors::InvalidAccountError};
-    /// let mut account = Account::<i32,(),()>::new(
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     Default::default(),
-    ///     vec![
-    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///         Account::new(2, Default::default(), Default::default(), Default::default())
-    ///     ],
-    /// );
-    /// account.push(Account::new(3, Default::default(), Default::default(), Default::default()));
-    /// assert!(account ==
-    ///     Account::new(
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         Default::default(),
-    ///         vec![
-    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
-    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
-    ///             Account::new(3, Default::default(), Default::default(), Default::default())
-    ///         ],
-    ///     )
-    /// );
-    /// assert!(account.push(Account::new(3, Default::default(), Default::default(), Default::default()))
-    ///     == Some(InvalidAccountError::ExistingName));
-    /// ```
-    pub fn push(&mut self, account: Self) {
-        if self.valid.names && self.accounts_names().contains(&&account.name) {
-            //check if account has the same name as a sibling account
-            self.valid.names = false;
-        }
-        if self.valid.children && !account.valid.is_valid() {
-            //check if Account is internally valid
-            self.valid.children = false;
-        }
-        if account.active {
-            for setting in account.settings.keys() {
-                self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
-            }
-        }
-        self.accounts.push(account); //this is only pushed after so we can used a borrowed account to get the keys
-    }
     fn deep_change_activity_helper(
         &mut self,
         new_active: bool,
@@ -1449,14 +1260,14 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// Returns `Some(true)` if the value of the setting was updated.
     /// Returns `Some(false)` if the value is in the Account but was not updated.
     ///
-    /// if you don't need the return value use [update_setting](update_setting) as it is faster
+    /// if you don't need the return value use [update_setting](Account::update_setting) as it is faster
     ///
     /// If an Account is [valid](Account#valid) this method never returns Some(true)
     /// as this method is used to turn an invalid Account into a valid one.
     ///
     /// # Examples
     /// ```
-    ///  //todo!() add example
+    ///  //TODO(Example)
     /// ```
     #[must_use]
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
@@ -1475,6 +1286,83 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
         self.settings.remove(setting).map(|_| true)
     }
 }
+impl<N: Clone + Eq + Hash + Incrementable + PartialEq, K, V> Account<N, K, V> {
+    /// Takes a `&N` and updates the name of a child `Account`.
+    ///
+    /// This can make a Account [invalid](Account#valid) if the child Account
+    /// got renamed to the same name as one of it's siblings.
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
+    /// the child `Account` to run the function. [`rename`](Account::rename) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::account::Account;
+    /// let mut account = Account::<String,(),()>::new(
+    ///     "Old Name".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
+    ///         ])
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.deep_rename(&"Cool Name".to_string(),&mut vec![&"3_2".to_string(),&"3".to_string()]), Ok("3_2".to_string()));
+    /// assert_eq!(account, Account::new(
+    ///     "Old Name".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("Cool Name".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default())
+    ///         ])
+    ///     ],
+    /// ));
+    /// ```
+    pub fn deep_rename(
+        &mut self,
+        new_name: &N,
+        account_names: &mut Vec<&N>,
+    ) -> Result<N, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        #[allow(clippy::option_if_let_else)]
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_rename(new_name, account_names) {
+                //recursive call
+                Ok(insert_option) => {
+                    Ok(insert_option) //returning the original value from the base case
+                }
+                Err(error) => match error {
+                    DeepError::EmptyVec => {
+                        let n = found_account.rename(new_name.clone());
+                        self.fix_valid_names();
+                        Ok(n)
+                    } //base case
+                    DeepError::NotFound => Err(error), //error/bad function call
+                },
+            }
+        } else {
+            Err(DeepError::NotFound)
+        }
+    }
+}
 impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
@@ -1487,7 +1375,7 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::{Account};
+    /// use hashmap_settings::account::{Account,Valid};
     /// let mut account = Account::<i32,(),()>::new(
     ///     Default::default(),
     ///     Default::default(),
@@ -1498,7 +1386,7 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     ///         Account::new(3, Default::default(), Default::default(), Default::default())
     ///     ],
     /// );
-    /// account.pop();
+    /// assert_eq!(account.pop(Valid::new_true()), Some(Account::new(3, Default::default(), Default::default(), Default::default())));
     /// assert!(account ==
     ///     Account::<i32,(),()>::new(
     ///         Default::default(),
@@ -1511,36 +1399,366 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     ///     )
     /// )
     /// ```
-    pub fn pop(&mut self) -> Option<Self> {
+    pub fn pop(&mut self, valid: Valid) -> Option<Self> {
         let popped_account = self.accounts.pop()?;
-        self.update_vec(&popped_account.keys().collect());
-        if !self.valid.names() {
-            self.valid.names = self.check_valid_names();
+        if !self.valid.names && valid.names {
+            self.valid.names = self.update_valid_names();
         }
-        if !self.valid.settings() {
-            self.valid.settings = self.check_valid_settings();
+        if !self.valid.children && valid.children {
+            self.valid.children = self.update_valid_children();
         }
-        if !self.valid.names() {
-            self.valid.names = self.check_valid_names();
+        if !self.valid.settings && valid.settings && popped_account.active {
+            self.update_vec(&popped_account.keys().collect());
+            self.valid.settings = self.update_valid_settings();
         }
         Some(popped_account)
     }
+    /// Removes the last element from the [`Vec`] of child `Account`s, from a child `Account,`and returns it, or [`None`] if it is empty.
+    ///
+    /// This will updated the [settings](Account#settings) of all necessary Accounts
+    /// so that the parent Account remains [valid](Account#valid)
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
+    /// the child `Account` to run the function. [`pop`](Account::pop) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let mut account = Account::<String,(),()>::new(
+    ///     "Old Name".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), true, Default::default(), vec![
+    ///                     Account::new("3_2.1".to_string(), true, Default::default(), Default::default()),
+    ///                 ]),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.deep_pop(Valid::new_true(), &mut vec![&"3_2".to_string(),&"3".to_string()])
+    ///     ,Ok(Some(Account::new("3_2.1".to_string(), true, Default::default(), Default::default())))
+    /// );
+    ///
+    ///
+    /// assert_eq!(account ,
+    ///     Account::<String,(),()>::new(
+    ///         "Old Name".to_string(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3".to_string(), true, Default::default(), vec![
+    ///                 Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///                 Account::new("3_2".to_string(), true, Default::default(), Default::default()),
+    ///                 Account::new("3_3".to_string(), true, Default::default(), Default::default()),
+    ///             ])
+    ///         ],
+    ///     )
+    /// );
+    ///
+    ///
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// ```
+    pub fn deep_pop(
+        &mut self,
+        valid: Valid,
+        account_names: &mut Vec<&N>,
+    ) -> Result<Option<Self>, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        #[allow(clippy::option_if_let_else)]
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            match found_account.deep_pop(valid, account_names) {
+                //recursive call
+                Ok(popped_account) => {
+                    Ok(match popped_account {
+                        None => None,
+                        Some(account) => {
+                            if account.active {
+                                self.update_vec(&account.keys().collect());
+                            }
+                            Some(account)
+                        }
+                    })
+                    //returning the original value from the base case
+                }
+                Err(error) => match error {
+                    DeepError::EmptyVec => Ok(found_account.pop(valid)), //base case
+                    DeepError::NotFound => Err(error),                   //error/bad function call
+                },
+            }
+        } else {
+            Err(DeepError::NotFound)
+        }
+    }
 }
+impl<N: Clone + Eq + Hash + Incrementable, K: Clone + Eq + Hash, V: Clone + PartialEq>
+    Account<N, K, V>
+{
+    /// Creates a new [valid](Account#valid) account
+    ///
+    /// This lets you create an `Account` that is sure to be fully valid
+    /// including it's child `Accounts` or an error is returned.
+    ///
+    /// It's recommend that parent `Accounts` are made with `new_valid` but child
+    /// `Accounts` are made with with [new](Account::new) to avoid repeated validity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::account::Account;
+    /// let account = Account::<String,(),()>::new(
+    ///     "New Account".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// assert_eq!(account, Account::<String,(),()>::new(
+    ///     "New Account".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), Default::default())
+    ///     ],
+    /// ));
+    pub fn new(name: N, active: bool, settings: HashMap<K, V>, accounts: Vec<Self>) -> Self {
+        let mut new_account = Self {
+            name,
+            active,
+            settings,
+            accounts,
+            valid: Valid::new_false(),
+        };
+        new_account.fix_valid(Valid::new_true());
+        new_account
+    }
+    /// Makes an invalid `Account` valid
+    ///
+    /// This method fixes the `Account` according to the specified [`Valid`] `Account` to make it [valid](Account#valid)
+    ///
+    /// This method is called by [new](Account::new) when an Account is created.
+    ///
+    /// # Examples
+    /// ```
+    ///  //TODO(Example)
+    /// ```
+    pub fn fix_valid(&mut self, valid: Valid) {
+        if self.valid.is_valid() && valid.is_valid() {
+            return;
+        }
+        if !self.valid.children && valid.children {
+            self.fix_valid_children();
+        }
+        if !self.valid.names && valid.names {
+            self.fix_valid_names();
+        }
+        if !self.valid.settings && valid.settings {
+            self.fix_valid_settings();
+        }
+    }
 
-/*
-    //unused functions
-    pub fn all_names(&self) -> Vec<&K> { //what would be the use
-        let mut r_value = vec![self.name()];
-        self.accounts
-            .iter()
-            .map(|a| a.all_names())
-            .for_each(|a| r_value.extend(a));
-        r_value
+    fn fix_valid_children(&mut self) {
+        for account in 0..self.len() {
+            if !self.accounts[account].valid.is_valid() {
+                self.accounts[account].fix_valid(Valid::default());
+            }
+        }
+        self.valid.children = true;
     }
-    fn accounts_mut(&mut self) -> &mut Vec<Account> {
-        &mut self.accounts
+}
+impl<
+        N: Clone + Eq + Hash + Incrementable + PartialEq,
+        K: Clone + Eq + Hash,
+        V: Clone + PartialEq,
+    > Account<N, K, V>
+{
+    /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
+    ///
+    /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
+    ///
+    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
+    ///
+    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
+    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let mut account = Account::<i32,(),()>::new(
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///         Account::new(2, Default::default(), Default::default(), Default::default())
+    ///     ],
+    /// );
+    /// account.push(Account::new(3, Default::default(), Default::default(), Default::default()), Valid::new_true());
+    /// assert!(account ==
+    ///     Account::new(
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new(1, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(2, Default::default(), Default::default(), Default::default()),
+    ///             Account::new(3, Default::default(), Default::default(), Default::default())
+    ///         ],
+    ///     )
+    /// );
+    /// ```
+    pub fn push(&mut self, account: Self, valid: Valid) {
+        if self.valid.names && valid.names && self.accounts_names().contains(&&account.name) {
+            //todo! change account name thingy
+            self.fix_valid(Valid::new(true, false, false));
+        }
+        if self.valid.children && valid.children && !account.valid.is_valid() {
+            self.fix_valid(Valid::new(false, false, true));
+        }
+        if self.valid.settings && valid.settings && !account.valid.is_valid() {
+            self.fix_valid(Valid::new(false, true, false));
+        }
+        if account.active {
+            for setting in account.settings.keys() {
+                self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
+            }
+        }
+        self.accounts.push(account);
     }
-*/
+    /// Appends an `Account` to the back of the `Vec` of child `Accounts` of a child `Account`.
+    ///
+    /// This will updated the [settings](Account#settings) of all necessary Accounts
+    /// so that the parent Account remains [valid](Account#valid)
+    ///
+    /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
+    /// the child `Account` to run the function. [`push`](Account::push) in this case.
+    ///
+    /// # Errors
+    ///
+    /// Deep functions can return [`DeepError`]'s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use hashmap_settings::account::{Account,Valid};
+    /// let mut account = Account::<String,(),()>::new(
+    ///     "Old Name".to_string(),
+    ///     Default::default(),
+    ///     Default::default(),
+    ///     vec![
+    ///         Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///         Account::new("3".to_string(), true, Default::default(), vec![
+    ///             Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3_3".to_string(), true, Default::default(), Default::default()),
+    ///         ])
+    ///     ],
+    /// );
+    ///
+    /// assert_eq!(account.deep_push(
+    ///     Account::new("3_2.1".to_string(), true, Default::default(), Default::default()),
+    ///     Valid::new_true(),
+    ///     &mut vec![&"3_2".to_string(),&"3".to_string()])
+    /// , None);
+    ///
+    ///
+    /// assert_eq!(account ,
+    ///     Account::<String,(),()>::new(
+    ///         "Old Name".to_string(),
+    ///         Default::default(),
+    ///         Default::default(),
+    ///         vec![
+    ///             Account::new("1".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("2".to_string(), true, Default::default(), Default::default()),
+    ///             Account::new("3".to_string(), true, Default::default(), vec![
+    ///                 Account::new("3_1".to_string(), true, Default::default(), Default::default()),
+    ///                 Account::new("3_2".to_string(), true, Default::default(), vec![
+    ///                     Account::new("3_2.1".to_string(), true, Default::default(), Default::default()),
+    ///                 ]),
+    ///                 Account::new("3_3".to_string(), true, Default::default(), Default::default()),
+    ///             ])
+    ///         ],
+    ///     )
+    /// );
+    ///
+    ///
+    /// # Ok::<(), hashmap_settings::types::errors::DeepError>(())
+    /// ```
+    pub fn deep_push(
+        &mut self,
+        account: Self,
+        valid: Valid,
+        account_names: &mut Vec<&N>,
+    ) -> Option<DeepError> {
+        self.deep_push_helper(account, valid, account_names).err()
+    }
+    fn deep_push_helper(
+        &mut self,
+        account: Self,
+        valid: Valid,
+        account_names: &mut Vec<&N>,
+    ) -> Result<Vec<K>, DeepError> {
+        let Some(account_to_find) = account_names.pop() else {
+            return Err(DeepError::EmptyVec); //error if the original call is empty, but this will create the base case in the recursive call
+        };
+        #[allow(clippy::option_if_let_else)]
+        if let Some(found_account) = self.mut_account_from_name(account_to_find) {
+            if account_names.is_empty() {
+                //this and the unreachable()! have been added due to https://github.com/rust-lang/rust/issues/21906
+                let is_active = account.active;
+                found_account.push(account, valid);
+                return Ok(if is_active {
+                    found_account.accounts[found_account.len() - 1]
+                        .keys()
+                        .map(std::borrow::ToOwned::to_owned)
+                        .collect::<Vec<_>>()
+                } else {
+                    vec![]
+                });
+            }
+            match found_account.deep_push_helper(account, valid, account_names) {
+                //recursive call
+                Ok(keys) => {
+                    self.update_vec(&keys.iter().collect());
+                    Ok(keys) //returning the original value from the base case
+                }
+                Err(error) => match error {
+                    DeepError::EmptyVec => {
+                        unreachable!() //Ok(found_account)
+                    } //base case
+                    DeepError::NotFound => Err(error), //error/bad function call
+                },
+            }
+        } else {
+            Err(DeepError::NotFound)
+        }
+    }
+}
 
 impl<N: Default, K, V> Default for Account<N, K, V> {
     fn default() -> Self {
@@ -1616,9 +1834,22 @@ impl<
 {
 }
 
-///todo!(doc)
+/// `Account`'s validity tracker
+///
+/// [`Account`] contains a valid field of type `Valid` that tracks if an [`Account`] is [valid](Account#valid).
+///
+/// `Valid` contains 3 `bool` fields corresponding to the 3 ways an account can be invalid:
+///
+/// names: An `Account` is invalid if it's children `Accounts` have duplicated names.
+///
+/// settings: An `Account` is invalid if it doesn't contain all settings present in it's children `Accounts`.
+///
+/// accounts: An `Account` is invalid if it's children `Accounts` are themselves invalid.
+///
+///
+/// `Valid` is also used in certain methods in `Account` that interact with it's `valid` field.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[must_use]
 pub struct Valid {
     names: bool,
@@ -1626,7 +1857,14 @@ pub struct Valid {
     children: bool,
 }
 impl Valid {
-    ///todo!(doc)
+    /// Creates a new `Valid`
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let _valid = Valid::new(true,true,true);
+    /// ```
     pub const fn new(names: bool, settings: bool, children: bool) -> Self {
         Self {
             names,
@@ -1634,25 +1872,97 @@ impl Valid {
             children,
         }
     }
-    ///todo!(doc)
+    /// Creates a new `Valid` where all fields are `true`.
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid = Valid::new_true();
+    /// assert_eq!(valid,Valid::new(true,true,true));
+    /// ```
+    pub const fn new_true() -> Self {
+        Self {
+            names: true,
+            settings: true,
+            children: true,
+        }
+    }
+    /// Creates a new `Valid` where all fields are `false`.
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid = Valid::new_false();
+    /// assert_eq!(valid,Valid::new(false,false,false));
+    /// ```
+    pub const fn new_false() -> Self {
+        Self {
+            names: false,
+            settings: false,
+            children: false,
+        }
+    }
+    /// Returns `true` if all fields are `true`.
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid = Valid::new(true,true,true);
+    /// assert!(valid.is_valid());
+    /// let invalid = Valid::new(false,true,true);
+    /// assert!(!invalid.is_valid());
+    /// ```
     #[must_use]
     pub const fn is_valid(&self) -> bool {
         self.children && self.settings && self.names
     }
-    ///todo!(doc)
+    /// Returns the value of the field `names`
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid1 = Valid::new(true,true,true);
+    /// assert!(valid1.names());
+    /// let valid2 = Valid::new(false,true,true);
+    /// assert!(!valid2.names());
+    /// ```
     #[must_use]
-    pub const fn children(&self) -> bool {
-        self.children
+    pub const fn names(&self) -> bool {
+        self.names
     }
-    ///todo!(doc)
+    /// Returns the value of the field `settings`
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid1 = Valid::new(true,true,true);
+    /// assert!(valid1.settings());
+    /// let valid2 = Valid::new(true,false,true);
+    /// assert!(!valid2.settings());
+    /// ```
     #[must_use]
     pub const fn settings(&self) -> bool {
         self.settings
     }
-    ///todo!(doc)
+    /// Returns the value of the field `children`
+    ///
+    /// # Examples
+    /// ```
+    /// use hashmap_settings::account::Valid;
+    ///
+    /// let valid1 = Valid::new(true,true,true);
+    /// assert!(valid1.children());
+    /// let valid2 = Valid::new(true,true,false);
+    /// assert!(!valid2.children());
+    /// ```
     #[must_use]
-    pub const fn names(&self) -> bool {
-        self.names
+    pub const fn children(&self) -> bool {
+        self.children
     }
 }
 impl Default for Valid {
@@ -1665,8 +1975,73 @@ impl Default for Valid {
     }
 }
 
-///todo!(doc)
+/// Trait for types that can be incremented.
+///
+/// This method is necessary for types that will be used as a name for [`Account`] as it is used
+/// to change an `Account's` name in case of duplication.
+///
+/// For types that have a limited set of names such as i32, if there are more `Accounts` than the max number
+/// of names (2^32 for i32) it will cause an infinite loop in certain `Account`'s methods.
+///
+///
+/// Implementations for `Incrementable` are under the feature "incrementable" that is
+/// activated by default.
+///
+/// The feature should be turned off in the case a different implementation than the provided is desired.
+///
+///
+/// # Examples
+///
+/// ```
+/// use hashmap_settings::account::Incrementable;
+///
+/// let mut number = 13_i32;
+/// number.increment_mut();
+/// assert_eq!(number, 14);
+/// ```
 pub trait Incrementable {
-    ///todo!(doc)
-    fn increment(&self) {}
+    /// return the incremented value
+    ///
+    /// # Examples
+    ///  ```
+    /// use hashmap_settings::account::Incrementable;
+    ///
+    /// let number = 13_i32;
+    /// assert_eq!(number.increment(), 14);
+    /// assert_eq!(number, 13);
+    /// ```
+    #[must_use]
+    fn increment(&self) -> Self;
+    /// increments self
+    ///
+    /// # Examples
+    ///  ```
+    /// use hashmap_settings::account::Incrementable;
+    ///
+    /// let mut number = 13_i32;
+    /// number.increment_mut();
+    /// assert_eq!(number, 14);
+    /// ```
+    fn increment_mut(&mut self);
+}
+
+#[cfg(feature = "incrementable")]
+impl Incrementable for i32 {
+    fn increment_mut(&mut self) {
+        *self += 1; //todo!(incrementable)
+    }
+
+    fn increment(&self) -> Self {
+        self + 1 //todo!(incrementable)
+    }
+}
+#[cfg(feature = "incrementable")]
+impl Incrementable for String {
+    fn increment_mut(&mut self) {
+        *self += "(1)"; //todo!(incrementable)
+    }
+
+    fn increment(&self) -> Self {
+        self.to_owned() + "(1)" //todo!(incrementable)
+    }
 }
