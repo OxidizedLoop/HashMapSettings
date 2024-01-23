@@ -1,4 +1,4 @@
-use crate::setting::Setting;
+use crate::stg::Setting;
 /*
 currently the types being added are the types that derive serde Deserialize per version 1.0.192
 https://docs.rs/serde/latest/serde/de/trait.Deserialize.html#
@@ -326,7 +326,7 @@ impl Setting for serde::de::IgnoredAny{}
 mod tests {
     #![allow(unused_imports)]
     use crate::{
-        setting::{Setting, Stg},
+        stg::{Setting, Stg},
         *,
     };
     #[test]

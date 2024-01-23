@@ -66,9 +66,7 @@
 ///module containing `Account`
 pub mod account;
 ///module containing the Stg type
-pub mod setting;
-/// module containing types used internally by the crate
-pub mod types;
+pub mod stg;
 
 #[cfg(test)]
 mod tests {
@@ -76,7 +74,7 @@ mod tests {
 
     use crate::{
         account::Account,
-        setting::{Setting, Stg, StgTrait,StgError},
+        stg::{Setting, Stg, StgTrait,StgError},
     };
 
     #[test]

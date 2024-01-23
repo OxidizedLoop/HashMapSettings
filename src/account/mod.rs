@@ -1,3 +1,8 @@
+
+///module including `Incrementable` implementations activated by the default feature "incrementable"
+#[cfg(feature = "incrementable")]
+pub mod incrementable_implementations;
+
 use core::{fmt::Debug, mem::replace};
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -8,7 +13,7 @@ use std::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::setting::Setting;
+use crate::stg::Setting;
 
 /// A [`HashMap`] wrapper for layered settings.
 ///
@@ -2023,27 +2028,6 @@ pub trait Incrementable {
     /// assert_eq!(number, 14);
     /// ```
     fn increment_mut(&mut self);
-}
-
-#[cfg(feature = "incrementable")]
-impl Incrementable for i32 {
-    fn increment_mut(&mut self) {
-        *self += 1; //todo!(incrementable)
-    }
-
-    fn increment(&self) -> Self {
-        self + 1 //todo!(incrementable)
-    }
-}
-#[cfg(feature = "incrementable")]
-impl Incrementable for String {
-    fn increment_mut(&mut self) {
-        *self += "(1)"; //todo!(incrementable)
-    }
-
-    fn increment(&self) -> Self {
-        self.to_owned() + "(1)" //todo!(incrementable)
-    }
 }
 
 /// Errors involving [Deep Functions](Account#deep-functions)

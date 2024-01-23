@@ -1,3 +1,6 @@
+///module containing implementations of `Setting` for rust types
+pub mod setting_implementations;
+
 use core::fmt::Debug;
 use std::any::Any;
 
@@ -14,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting,
 /// but for now you can do it by adding the following lines:
 /// ```
-/// # use hashmap_settings::setting::Setting;
+/// # use hashmap_settings::stg::Setting;
 /// # // use serde::{Deserialize, Serialize};
 /// # #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 /// # pub struct MyType{}
@@ -28,7 +31,7 @@ pub trait Setting: Any + Debug + DynClone + DynEq {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     /// let bool = true;
     /// let bool_stg: Stg = bool.stg();
     /// assert!(bool_stg == bool.stg())
@@ -89,7 +92,7 @@ impl Stg {
     /// # Example
     ///
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// assert_eq!(bool_stg.unstg::<bool>()?, true);
@@ -98,7 +101,7 @@ impl Stg {
     /// ```
     ///
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let bool :bool = bool_stg.unstg()?;
@@ -112,7 +115,7 @@ impl Stg {
     /// This function returns a Err(Box<dyn Any>) if we try to covert to the wrong type.
     ///
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let number = match bool_stg.unstg::<i32>(){
@@ -140,7 +143,7 @@ impl Stg {
     /// Consider using [`unstg`](Stg::unstg) as it returns a result type instead.
     ///
     /// ```should_panic
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let _number :i32 = bool_stg.unstg_panic();
@@ -149,14 +152,14 @@ impl Stg {
     /// # Examples
     ///
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// assert_eq!(bool_stg.unstg_panic::<bool>(), true);
     /// //we need to use ::<bool> to specify that want to turn bool_stg into a bool
     /// ```
     /// ```
-    /// use hashmap_settings::setting::{Setting,Stg};
+    /// use hashmap_settings::stg::{Setting,Stg};
     ///
     /// let bool_stg: Stg = true.stg();
     /// let bool :bool = bool_stg.unstg_panic();
@@ -200,7 +203,7 @@ impl StgTrait for Option<&Stg> {
 ///
 /// #Example
 /// ```
-/// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait,StgError}};
+/// # use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait,StgError}};
 ///
 /// //creating a Stg Account
 /// let mut account = Account::<(), &str, Stg>::default();
@@ -241,7 +244,7 @@ pub trait StgTrait {
     /// # Examples
     ///
     /// ```
-    /// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait,StgError}};
+    /// # use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait,StgError}};
     /// let mut account: Account<(),&str,Stg> = Default::default();
     /// account.insert("a small number", 42_i32.stg());
     /// assert_eq!(account.get(&"a small number").unstg::<i32>(), Ok(42));
@@ -258,13 +261,13 @@ pub trait StgTrait {
     /// # Examples
     ///
     /// ```
-    /// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait}};
+    /// # use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait}};
     /// let mut account: Account<(),&str,Stg> = Default::default();
     /// account.insert("a small number", 42_i32.stg());
     /// assert_eq!(account.get(&"a small number").unstg_panic::<i32>(), 42);
     /// ```
     /// ```should_panic
-    /// # use hashmap_settings::{account::Account,setting::{Setting,Stg,StgTrait}};
+    /// # use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait}};
     /// let mut account: Account<(),&str,Stg> = Default::default();
     /// account.insert("a small number", 42_i32.stg());
     /// assert_eq!(account.get(&"a small number").unstg_panic::<bool>(), true);//this panics
@@ -275,6 +278,7 @@ pub trait StgTrait {
 
 /// Errors for [Stg] and [StgTrait] methods
 #[derive(Debug, PartialEq, Eq)]
+#[allow(clippy::module_name_repetitions)]
 pub enum StgError {
     /// No value found, equivalent to None in Option()
     None,
