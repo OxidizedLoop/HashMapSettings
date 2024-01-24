@@ -103,9 +103,15 @@ use crate::stg::Setting;
 ///
 ///  - [`capacity`](Account::capacity): Returns the number of elements the map can hold without reallocating.
 ///
-///  - [`update_setting`](Account::update_setting): todo!(add other update details).
+///  - [`update_setting`](Account::update_setting): Updates a setting with the value its supposed to have.
 ///
+///  - [`update_setting`](Account::update_setting_returns): Updates a setting with the value its supposed to have and.
+/// 
+///  - [`update_setting`](Account::update_vec): Updates a group of settings with the value they are supposed to have.
+/// 
+///  - [`update_setting`](Account::update_all_settings): Updates all settings currently present in the Account with the value they are supposed to have.
 ///
+/// 
 /// # [Accounts](Account#accounts)
 ///
 ///
@@ -137,6 +143,7 @@ use crate::stg::Setting;
 ///
 /// # [Valid](Account#valid)
 ///  
+/// 
 /// A valid `Account` is one where it's methods will always behave as intended.
 ///
 /// There are certain methods that may make an Account invalid if improperly used,
