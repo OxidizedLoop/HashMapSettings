@@ -1637,10 +1637,6 @@ impl<
     /// );
     /// ```
     pub fn push(&mut self, account: Self, valid: Valid) {
-        if self.valid.names && valid.names && self.accounts_names().contains(&&account.name) {
-            //todo! change account name thingy
-            self.fix_valid(Valid::new(true, false, false));
-        }
         if self.valid.children && valid.children && !account.valid.is_valid() {
             self.fix_valid(Valid::new(false, false, true));
         }
@@ -1652,7 +1648,12 @@ impl<
                 self.insert(setting.to_owned(), account.get(setting).unwrap().clone());
             }
         }
-        self.accounts.push(account);
+        if self.valid.names && valid.names && self.accounts_names().contains(&&account.name) {
+            self.accounts.push(account);
+            self.fix_valid(Valid::new(true, false, false));
+        } else {
+            self.accounts.push(account);
+        }
     }
     /// Appends an `Account` to the back of the `Vec` of child `Accounts` of a child `Account`.
     ///
