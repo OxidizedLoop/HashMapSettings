@@ -1,3 +1,38 @@
+//! This module contains the type abstraction [`Stg`] and other relevant elements.
+//! 
+//! [`Stg`] type abstraction  
+//! 
+//! [`Setting`] is the trait that needs to be implemented for types for them to be turned into `Stg`
+//! 
+//! [`StgError`] Error on conversion from `Stg` or T<&Stg> into S: Setting
+//! 
+//! [`StgTrait`] Trait implement 
+//! 
+//! 
+//! # Example use of `Stg` without layers but with distinct types:
+//!
+//! ```rust
+//! use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait,StgError}};
+//! //creating an account
+//! let mut account = Account::<(),&str,Stg>::default();
+//!
+//! //inserting values of distinct types
+//! account.insert("Number of trees",5.stg());
+//! account.insert("Grass color","green".to_string().stg());
+//! account.insert("Today is good",true.stg());
+//!
+//! //getting values from the account
+//! let today_bool: bool = account.get(&"Today is good").unstg()?;
+//! let grass_color: String = account.get(&"Grass color").unstg()?;
+//! let trees: i32 = account.get(&"Number of trees").unstg()?;
+//!
+//! //example of using the values
+//! print!("It's {today_bool} that today is a wonderful day,
+//!     the grass is {grass_color} and I can see {trees} trees in the distance");
+//! 
+//! Ok::<(),StgError>(())
+//! ```
+
 ///module containing implementations of `Setting` for rust types
 pub mod setting_implementations;
 
