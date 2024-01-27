@@ -1,4 +1,3 @@
-
 ///module including `Incrementable` implementations activated by the default feature "incrementable"
 #[cfg(feature = "incrementable")]
 pub mod incrementable_implementations;
@@ -106,22 +105,22 @@ use crate::stg::Setting;
 ///  - [`update_setting`](Account::update_setting): Updates a setting with the value its supposed to have.
 ///
 ///  - [`update_setting`](Account::update_setting_returns): Updates a setting with the value its supposed to have and.
-/// 
+///
 ///  - [`update_setting`](Account::update_vec): Updates a group of settings with the value they are supposed to have.
-/// 
+///
 ///  - [`update_setting`](Account::update_all_settings): Updates all settings currently present in the Account with the value they are supposed to have.
 ///
-/// 
+///
 /// # [Accounts](Account#accounts)
 ///
 ///
 /// A `Vec` of Accounts. The Account that holds the `Vec` is the parent Account and the Accounts that are being held
 /// are the child Accounts.
 ///
-/// The consider the bottom layer of the `Vec` Account at index 0, and the top layer the on at len()-1.
+/// We consider the bottom layer of the `Vec` the Account at index 0, and the top layer the on at len()-1.
 ///
 /// When the `Vec` is changed, the parent account will update its settings, such that when
-/// we use [get](Account.get) on the parent Account we obtain the value from the top layer
+/// we use [get()](Account::get) on the parent Account we obtain the value present in the top layer
 /// containing the setting or return `None` if no layer contained it.
 ///
 ///  - [`accounts`](Account::accounts): Get an Account's child `Accounts`
@@ -143,7 +142,7 @@ use crate::stg::Setting;
 ///
 /// # [Valid](Account#valid)
 ///  
-/// 
+///
 /// A valid `Account` is one where it's methods will always behave as intended.
 ///
 /// There are certain methods that may make an Account invalid if improperly used,
@@ -159,17 +158,21 @@ use crate::stg::Setting;
 ///
 /// `Valid` contains 3 `bool` fields corresponding to the 3 ways an account can be invalid:
 ///
-/// names: An `Account` is invalid if it's children `Accounts` have duplicated names.
+/// - names: An `Account` is invalid if it's children `Accounts` have duplicated names.
 ///
-/// settings: An `Account` is invalid if it doesn't contain all settings present in it's children `Accounts`.
+/// - settings: An `Account` is invalid if it doesn't contain all settings present in it's children `Accounts`.
 ///
-/// accounts: An `Account` is invalid if it's children `Accounts` are themselves invalid.
+/// - accounts: An `Account` is invalid if it's children `Accounts` are themselves invalid.
 ///
 /// If all the fields are true then the `Account` is valid.
 ///
-/// An Account can be temporary made invalid  for either efficiency (using [push](Account::push) or [pop](Account::pop) repeatedly) 
-/// or while using [deep_mut](Account::deep_mut) for something that isn't covered by the other [deep functions](Account#deep-functions).
-/// But this should be fixed by 
+/// An Account can be temporary made invalid for:
+///
+///  - efficiency (eg: using [push](Account::push) or [pop](Account::pop) repeatedly)
+///
+///  - using [deep_mut](Account::deep_mut) for something that isn't covered by the other [deep functions](Account#deep-functions).
+///
+/// But this should be fixed immediately after. 
 ///
 /// -[valid](Account::valid): Returns a reference to the `Account` `valid` field.
 ///
@@ -1834,7 +1837,7 @@ impl<
     > Setting for Account<N, K, V>
 {
     fn typetag_deserialize(&self) {
-        //todo!(figure what this is supposed to do as its not mut, and return "()")
+        //todo!(figure what this is supposed to do as its not mut, and returns "()")
     }
 }
 

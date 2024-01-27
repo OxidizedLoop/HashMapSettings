@@ -1,14 +1,14 @@
 //! This module contains the type abstraction [`Stg`] and other relevant elements.
-//! 
+//!
 //! [`Stg`] type abstraction  
-//! 
+//!
 //! [`Setting`] is the trait that needs to be implemented for types for them to be turned into `Stg`
-//! 
+//!
 //! [`StgError`] Error on conversion from `Stg` or T<&Stg> into S: Setting
-//! 
-//! [`StgTrait`] Trait implement 
-//! 
-//! 
+//!
+//! [`StgTrait`] Trait implement
+//!
+//!
 //! # Example use of `Stg` without layers but with distinct types:
 //!
 //! ```rust
@@ -29,7 +29,7 @@
 //! //example of using the values
 //! print!("It's {today_bool} that today is a wonderful day,
 //!     the grass is {grass_color} and I can see {trees} trees in the distance");
-//! 
+//!
 //! Ok::<(),StgError>(())
 //! ```
 
@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 /// # #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 /// # pub struct MyType{}
 /// // add #[typetag::serde] if serde feature is activated
-///impl Setting for MyType{}
+/// impl Setting for MyType{}
 /// ```
 #[cfg_attr(feature = "serde", typetag::serde(tag = "setting"))]
 pub trait Setting: Any + Debug + DynClone + DynEq {
