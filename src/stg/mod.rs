@@ -1,3 +1,38 @@
+//! This module contains the type abstraction [`Stg`] and other relevant elements.
+//!
+//! [`Stg`] type abstraction  
+//!
+//! [`Setting`] is the trait that needs to be implemented for types for them to be turned into `Stg`
+//!
+//! [`StgError`] Error on conversion from `Stg` or T<&Stg> into S: Setting
+//!
+//! [`StgTrait`] Trait implement
+//!
+//!
+//! # Example use of `Stg` without layers but with distinct types:
+//!
+//! ```rust
+//! use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait,StgError}};
+//! //creating an account
+//! let mut account = Account::<(),&str,Stg>::default();
+//!
+//! //inserting values of distinct types
+//! account.insert("Number of trees",5.stg());
+//! account.insert("Grass color","green".to_string().stg());
+//! account.insert("Today is good",true.stg());
+//!
+//! //getting values from the account
+//! let today_bool: bool = account.get(&"Today is good").unstg()?;
+//! let grass_color: String = account.get(&"Grass color").unstg()?;
+//! let trees: i32 = account.get(&"Number of trees").unstg()?;
+//!
+//! //example of using the values
+//! print!("It's {today_bool} that today is a wonderful day,
+//!     the grass is {grass_color} and I can see {trees} trees in the distance");
+//!
+//! Ok::<(),StgError>(())
+//! ```
+
 ///module containing implementations of `Setting` for rust types
 pub mod setting_implementations;
 
@@ -22,7 +57,7 @@ use serde::{Deserialize, Serialize};
 /// # #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
 /// # pub struct MyType{}
 /// // add #[typetag::serde] if serde feature is activated
-///impl Setting for MyType{}
+/// impl Setting for MyType{}
 /// ```
 #[cfg_attr(feature = "serde", typetag::serde(tag = "setting"))]
 pub trait Setting: Any + Debug + DynClone + DynEq {
@@ -59,13 +94,19 @@ impl PartialEq for Box<dyn Setting> {
 /// Types implementing `Setting` can be turned into a `Stg` with [.stg()](Setting::stg).
 ///
 /// ```
-/// //todo!(example)
+/// use hashmap_settings::stg::{Setting,Stg};
+/// # #[allow(unused_variables)]
+/// let bool_stg: Stg = true.stg();
 /// ```
 ///
 /// They can be turned back to a specific type with [.unstg()](Stg::unstg) or [.unstg_panic()](Stg::unstg_panic)
 ///
 ///  ```
-/// //todo!(example)
+/// # use hashmap_settings::stg::{Setting,Stg};
+/// # let bool_stg: Stg = true.stg();
+/// # #[allow(unused_variables)]
+/// let bool: bool = bool_stg.unstg()?;
+/// # Ok::<(),Box<dyn core::any::Any>>(())
 /// ```
 ///
 /// Additionally there is the [`StgTrait`] that can be implemented for types containing `Stg` to allow
@@ -74,7 +115,14 @@ impl PartialEq for Box<dyn Setting> {
 /// The main example would be [Option<&Stg>]
 ///
 ///  ```
-/// //todo!(example)
+/// use std::collections::HashMap;
+/// use hashmap_settings::stg::{Setting,Stg,StgError,StgTrait};
+/// let bool_stg: Stg = true.stg();
+/// let mut hashmap = HashMap::new();
+/// hashmap.insert("bool",bool_stg);
+/// # #[allow(unused_variables)]
+/// let bool: bool = hashmap.get("bool").unstg()?;
+/// # Ok::<(),StgError>(())
 /// ```
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug)]
@@ -184,7 +232,7 @@ impl StgTrait for Option<&Stg> {
         self.map_or(Err(StgError::None), |value| {
             match value.clone().unstg::<S>() {
                 Ok(value) => Ok(value),
-                Err(_error) => Err(StgError::WrongType), //todo! change WrongType to contain error Err(StgError::WrongType(error)),
+                Err(_error) => Err(StgError::WrongType),
             }
         })
     }
@@ -282,6 +330,6 @@ pub trait StgTrait {
 pub enum StgError {
     /// No value found, equivalent to None in Option()
     None,
-    /// Error of trying to  convert to the wrong type, todo!()Err(Box<dyn Any>), result from calling the if we try to covert to the wrong type
-    WrongType,
+    /// Error of trying to convert to the wrong type,
+    WrongType, //todo!() change WrongType to contain the error Err(StgError::WrongType(Box<dyn core::any::Any>)),
 }

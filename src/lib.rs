@@ -1,34 +1,49 @@
-//! `HashMap` wrapper for layered Settings of distinct types.
+//! ## `HashMap` wrapper for layered settings
 //!
-//! This crate allows a developer to store and access all program settings on a [`Account`](crate::account::Account) struct,
-//! a wrapper around a [`HashMap`](std::collections::HashMap) that can hold any type that implements [`Setting`](crate::setting::Setting).
-//!```
-//!# use hashmap_settings::stg::Setting;
-//!# //use serde::{Deserialize, Serialize};
-//!# #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
-//!# pub struct MyType{}
-//! // add #[typetag::serde] if serde feature is activated
-//!impl Setting for MyType{}
-//! ```
-//!  
-//! An Account can also hold other [Accounts](crate::account::Account#accounts), allowing the existence of layered settings.
+//! This crate facilitates the management of settings, with the goal of allowing developers to turn previously needlessly set in stone
+//! values into a setting a user can change, as well as making it easier for a developer to create multiple priority levels of settings,
+//! allowing users to have greater control and customization including across devices.
 //!
-//! This makes it possible to create complex systems where multiple places
-//! (eg: Themes, Extensions, Global User Settings, Local User Settings)
-//! are changing the same settings, and the value is taken from the top layer containing the setting
-//! or the default layer if no other layer contained it.
+//! This crate allows a developer to store and access all program settings on a [`Account`](crate::account::Account),
+//! a wrapper around a [`HashMap`](std::collections::HashMap).
 //!
-//! This crate gives the tools necessary for a developer to create layered settings.
-//! This allows users of the application to not only have different settings for different environments,
-//! but also have groups of settings that they can easily swap.
+//! This crate is intended to be used with some sort of type abstraction so that settings of distinct types can be stored in
+//! a single `Account`. This crate provides the [`Stg`](crate::stg::Stg) type abstraction for this.
+//!
+//! An `Account` can also hold other [Accounts](crate::account::Account#accounts), allowing the existence of layered settings,
+//! that permit the creation complex systems that have the:
+//!
+//! ### Benefits
+//!
+//! 1. Having multiple places changing the same setting with the value being taken from the place that is deemed
+//! to have the most importance.
+//! (eg: Default, Themes, Extensions, Global Settings, OS Settings, Device Settings, Temporary Settings )
+//!
+//! 2. Organization of Settings. Given that an `Account` can hold accounts, and they can hold accounts of they own, its possible for
+//! small groups of settings to be organized in an `Account`, making it more convenient to locate a setting, or display a group of settings.
+//! Important to notice that this organization doesn't need to be (but could be) enforced in all held accounts equally.
+//!
+//! 3. `Account`s can be individually [deactivated](crate::account::Account#active) allowing for a developer (or a user)
+//! to group settings in an `Account` and easily ignore them under certain conditions.
+//!
+//! ### Drawbacks
+//!
+//! 1. Each `Account` holds a copy of the settings present in it's child Accounts, so there is a memory cost, but its
+//! [planned](https://github.com/OxidizedLoop/HashMapSettings/issues/28) for it to be changed to a reference to the value instead.
+//!
+//! 2. Having to internally do a [`HashMap`](std::collections::HashMap)'s .get() will most likely be slower than alternatives.
 //!
 //! ## How to use
+//!
+//! This crate relies on the nightly feature [dyn trait upcasting](https://github.com/rust-lang/rust/issues/65991)
+//! that was supposed to be stable in rust 1.76.0, unfortunately it has been [delayed](https://github.com/rust-lang/rust/pull/120233)
+//! so currently the nightly compiler is required.
 //!
 //! Add the following line to your Cargo.toml:
 //!
 //! ```toml
 //! [dependencies]
-//! hashmap_settings = "0.4"
+//! hashmap_settings = "0.5"
 //! ```
 //!
 //! Add the following line to your .rs file:
@@ -37,35 +52,13 @@
 //! # #[allow(warnings)]
 //! use hashmap_settings::account::Account;
 //! ```
-//!
-//! Basic use of an `Account` without layers:
-//!
-//! ```rust
-//! /*
-//! # use hashmap_settings::account::Account;
-//! //creating a basic account
-//! let mut account = Account::<(),&str>::default();
-//!
-//! //inserting values of distinct types
-//! account.insert("Number of trees",5);
-//! account.insert("Grass color","green".to_string());
-//! account.insert("Today is good",true);
-//!
-//! //getting values from the account
-//! let today_bool: bool = account.get(&"Today is good").unwrap();
-//! let grass_color: String = account.get(&"Grass color").unwrap();
-//! let trees: i32 = account.get(&"Number of trees").unwrap();
-//!
-//! //example of using the values
-//! print!("It's {today_bool} that today is a wonderful day,
-//!     the grass is {grass_color} and I can see {trees} trees in the distance");
-//! */
-//! ```
+
+#![feature(trait_upcasting)]
 
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
-///module containing `Account`
+/// module containing [`Account`]
 pub mod account;
-///module containing the Stg type
+/// module containing the type abstraction [`Stg`]
 pub mod stg;
 
 #[cfg(test)]
@@ -74,7 +67,7 @@ mod tests {
 
     use crate::{
         account::Account,
-        stg::{Setting, Stg, StgTrait,StgError},
+        stg::{Setting, Stg, StgError, StgTrait},
     };
 
     #[test]
