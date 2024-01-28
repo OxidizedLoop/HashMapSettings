@@ -82,6 +82,7 @@ pub trait Setting: Any + Debug + DynClone + DynEq {
 }
 dyn_clone::clone_trait_object!(Setting);
 impl PartialEq for Box<dyn Setting> {
+    #[allow(clippy::unconditional_recursion)]//todo!(git issue https://github.com/rust-lang/rust-clippy/pull/12177 should resolve this)
     fn eq(&self, other: &Self) -> bool {
         let x: Box<dyn DynEq> = self.clone();
         let y: Box<dyn DynEq> = other.clone();
