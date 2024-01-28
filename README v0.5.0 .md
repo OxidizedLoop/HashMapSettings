@@ -60,7 +60,6 @@ hashmap_settings = "0.5"
 Add the following line to your .rs file:
 
 ```rust
-# #[allow(warnings)]
 use hashmap_settings::account::Account;
 ```
 
