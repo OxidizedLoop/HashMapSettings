@@ -17,9 +17,8 @@ dyn_ord = "0.2.1"
 typetag = {version = "0.2", optional = true}
 
 [features]
-default = ["incrementable"]
+default = []
 serde = ["dep:serde","dep:typetag"]
-incrementable = []
 
 [lints]
 clippy.cargo = "warn"

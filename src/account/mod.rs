@@ -1,5 +1,4 @@
-///module including `Incrementable` implementations activated by the default feature "incrementable"
-#[cfg(feature = "incrementable")]
+///module including `Incrementable` implementations
 pub mod incrementable_implementations;
 
 use core::{fmt::Debug, mem::replace};
