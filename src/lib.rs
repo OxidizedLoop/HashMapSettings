@@ -53,6 +53,8 @@
 //! use hashmap_settings::account::Account;
 //! ```
 
+#![feature(trait_upcasting)]
+
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
 /// module containing [`Account`]
 pub mod account;
