@@ -61,6 +61,10 @@ pub mod account;
 /// module containing the type abstraction [`Stg`]
 pub mod stg;
 
+// inline for docs
+#[doc(inline)]
+pub use self::{account::Account, stg::Stg};
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
