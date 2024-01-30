@@ -171,7 +171,7 @@ use crate::stg::Setting;
 ///
 ///  - using [deep_mut](Account::deep_mut) for something that isn't covered by the other [deep functions](Account#deep-functions).
 ///
-/// But this should be fixed immediately after. 
+/// But this should be fixed immediately after.
 ///
 /// -[valid](Account::valid): Returns a reference to the `Account` `valid` field.
 ///
@@ -200,11 +200,12 @@ use crate::stg::Setting;
 /// [deep_mut](Account::deep_mut) exists but it can make an Account [invalid](Account#valid)
 /// so its recommend to use the `deep` version of methods instead
 ///  
-#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[must_use]
 pub struct Account<N, K, V> {
     name: N,
     active: bool,
+    #[cfg_attr(feature = "serde", serde(bound = "K: Eq + Hash"))]
     settings: HashMap<K, V>,
     accounts: Vec<Account<N, K, V>>,
     valid: Valid,
@@ -1815,15 +1816,6 @@ impl<N: PartialEq, K: Eq + Hash, V: PartialEq> PartialEq for Account<N, K, V> {
             && self.settings == other.settings
             && self.accounts == other.accounts
             && self.valid == other.valid
-    }
-}
-#[cfg(feature = "serde")]
-impl<'de, N, K, V> Deserialize<'de> for Account<N, K, V> {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        todo!()
     }
 }
 
