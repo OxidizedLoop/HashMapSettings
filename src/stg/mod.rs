@@ -9,7 +9,7 @@
 //! [`StgTrait`] Trait implement
 //!
 //!
-//! # Example use of `Stg` without layers but with distinct types:
+//! # Example use of `Stg` in an [`Account`](crate::account::Account):
 //!
 //! ```rust
 //! use hashmap_settings::{account::Account,stg::{Setting,Stg,StgTrait,StgError}};
@@ -53,9 +53,14 @@ use serde::{Deserialize, Serialize};
 /// but for now you can do it by adding the following lines:
 /// ```
 /// # use hashmap_settings::stg::Setting;
-/// # // use serde::{Deserialize, Serialize};
-/// # #[derive(Clone, Debug, PartialEq)] //, Deserialize, Serialize
+/// # #[cfg(feature = "serde")]
+/// # use serde::{Deserialize, Serialize};
+/// 
+/// # #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// # #[derive(Clone, Debug, PartialEq)]
 /// # pub struct MyType{}
+/// 
+/// # #[cfg_attr(feature = "serde", typetag::serde)]
 /// // add #[typetag::serde] if serde feature is activated
 /// impl Setting for MyType{}
 /// ```
