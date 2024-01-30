@@ -50,16 +50,25 @@
 //!
 //! ```rust
 //! # #[allow(warnings)]
-//! use hashmap_settings::account::Account;
+//! use hashmap_settings::prelude::*;
 //! ```
 
 #![feature(trait_upcasting)]
-
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
 /// module containing [`Account`]
 pub mod account;
 /// module containing the type abstraction [`Stg`]
 pub mod stg;
+/// HashMap_Settings Prelude
+pub mod prelude {
+    //! Prelude containing everything that will likely be used while using `Account`
+    //!
+    //! This includes everything in the crate except the trait [`Incrementable`](crate::account::Incrementable)
+    #[doc(inline)]
+    pub use crate::account::{Account, DeepError, Valid};
+    #[doc(inline)]
+    pub use crate::stg::{Setting, Stg, StgError, StgTrait};
+}
 
 // inline for docs
 #[doc(inline)]
@@ -117,6 +126,22 @@ mod tests {
     #[test]
     fn partialeq_test() {
         assert!(true.stg() == true.stg());
+    }
+    #[test]
+    const fn setting_example() {
+        use crate::stg::Setting;
+
+        #[cfg(feature = "serde")]
+        use serde::{Deserialize, Serialize};
+
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[allow(clippy::derive_partial_eq_without_eq)]
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct MyType {}
+
+        #[cfg_attr(feature = "serde", typetag::serde)]
+        // add #[typetag::serde] if serde feature is activated
+        impl Setting for MyType {}
     }
     #[test]
     fn account_new() {
