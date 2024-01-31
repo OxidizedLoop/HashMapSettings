@@ -53,9 +53,10 @@ use crate::stg::Setting;
 /// # [Name](Account#name)
 ///
 ///
-/// An `Account's` name is used to identify an Account in multiple methods involving [child](Account#accounts) `Accounts`.
+/// An `Account's` name is used to identify an Account in multiple methods involving [child `Accounts`](Account#accounts) .
 ///
-/// For this reason child `Accounts` need to be uniquely named for the parent `Account` to be [valid](Account#valid).
+/// For this reason child `Accounts` need to be uniquely named for the parent `Account` to be [valid](Account#valid) and `N` 
+/// is required to implement the [Incrementable] trait automatically increments the name in case of repetition.
 ///
 ///
 ///  - [`name`](Account::name): Get an account's name
