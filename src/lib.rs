@@ -4,11 +4,11 @@
 //! values into a setting a user can change, as well as making it easier for a developer to create multiple priority levels of settings,
 //! allowing users to have greater control and customization including across devices.
 //!
-//! This crate allows a developer to store and access all program settings on a [`Account`](crate::account::Account),
+//! This crate allows a developer to store and access all program settings on a [`Account`],
 //! a wrapper around a [`HashMap`](std::collections::HashMap).
 //!
 //! This crate is intended to be used with some sort of type abstraction so that settings of distinct types can be stored in
-//! a single `Account`. This crate provides the [`Stg`](crate::stg::Stg) type abstraction for this.
+//! a single `Account`. This crate provides the [`Stg`] type abstraction for this.
 //!
 //! An `Account` can also hold other [Accounts](crate::account::Account#accounts), allowing the existence of layered settings,
 //! that permit the creation complex systems that have the:
@@ -55,13 +55,11 @@
 
 #![feature(trait_upcasting)]
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
-/// module containing [`Account`]
+/// [`Account`] and other related elements.
 pub mod account;
-/// module containing the type abstraction [`Stg`]
 pub mod stg;
-/// HashMap_Settings Prelude
 pub mod prelude {
-    //! Prelude containing everything that will likely be used while using `Account`
+    //! Prelude containing everything that will likely be needed while using `Account`
     //!
     //! This includes everything in the crate except the trait [`Incrementable`](crate::account::Incrementable)
     #[doc(inline)]

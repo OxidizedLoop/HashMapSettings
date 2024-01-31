@@ -1,4 +1,4 @@
-//! This module contains the type abstraction [`Stg`] and other relevant elements.
+//! type abstraction [`Stg`] and other related elements.
 //!
 //! [`Stg`] type abstraction  
 //!
@@ -47,7 +47,7 @@ use serde::{Deserialize, Serialize};
 /// Required trait for conversion to abstract type [Stg]
 ///
 /// For a Type to be able to implement Setting it needs to implement the traits
-/// [Clone], [Debug], [PartialEq] (as well as [Deserialize] and [Serialize] if the "serde" feature is activated )
+/// [Clone], [Debug], [PartialEq] (as well as [Deserialize](https://docs.rs/serde/latest/serde/trait.Deserialize.html) and [Serialize](https://docs.rs/serde/latest/serde/trait.Serialize.html) if the "serde" feature is activated )
 ///
 /// In the [future](https://github.com/OxidizedLoop/HashMapSettings/issues/1) you will be able to derive Setting,
 /// but for now you can do it by adding the following lines:
@@ -55,11 +55,11 @@ use serde::{Deserialize, Serialize};
 /// # use hashmap_settings::stg::Setting;
 /// # #[cfg(feature = "serde")]
 /// # use serde::{Deserialize, Serialize};
-/// 
+/// #
 /// # #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// # #[derive(Clone, Debug, PartialEq)]
 /// # pub struct MyType{}
-/// 
+/// #
 /// # #[cfg_attr(feature = "serde", typetag::serde)]
 /// // add #[typetag::serde] if serde feature is activated
 /// impl Setting for MyType{}
@@ -87,7 +87,7 @@ pub trait Setting: Any + Debug + DynClone + DynEq {
 }
 dyn_clone::clone_trait_object!(Setting);
 impl PartialEq for Box<dyn Setting> {
-    #[allow(clippy::unconditional_recursion)]//todo!(git issue https://github.com/rust-lang/rust-clippy/pull/12177 should resolve this)
+    #[allow(clippy::unconditional_recursion)] //todo!(git issue https://github.com/rust-lang/rust-clippy/pull/12177 should resolve this)
     fn eq(&self, other: &Self) -> bool {
         let x: Box<dyn DynEq> = self.clone();
         let y: Box<dyn DynEq> = other.clone();
@@ -95,7 +95,7 @@ impl PartialEq for Box<dyn Setting> {
     }
 }
 
-/// Type abstraction for types implementing [`Setting`]
+/// type abstraction for types implementing [`Setting`]
 ///
 /// Types implementing `Setting` can be turned into a `Stg` with [.stg()](Setting::stg).
 ///
@@ -166,7 +166,7 @@ impl Stg {
     ///
     /// # Errors
     ///
-    /// This function returns a Err(Box<dyn Any>) if we try to covert to the wrong type.
+    /// This function returns a `Err(Box<dyn Any>)` if we try to covert to the wrong type.
     ///
     /// ```
     /// use hashmap_settings::stg::{Setting,Stg};
