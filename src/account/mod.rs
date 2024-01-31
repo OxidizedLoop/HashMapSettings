@@ -1381,9 +1381,8 @@ impl<N: Clone + Eq + Hash + Incrementable + PartialEq, K, V> Account<N, K, V> {
 impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// Removes the last element from the [`Vec`] of child `Account`s and returns it, or [`None`] if it is empty.
     ///
-    /// Will update the settings from the parent `Account` present on the popped child `Account`.
-    /// Consider using [pop_unchecked](Account::pop_unchecked) if you are removing multiple child `Accounts`.
-    ///
+    /// Depending on the [Valid] provided it could make the parent `Account` [invalid](Account#valid).
+    /// Providing a `Valid::new_true()` will always result in a valid `Account` so it is recommended.
     ///
     /// This method contains a call to [`Vec`]'s [`pop()`](Vec::pop()).
     ///
@@ -1430,8 +1429,8 @@ impl<N: Eq + Hash, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> 
     }
     /// Removes the last element from the [`Vec`] of child `Account`s, from a child `Account,`and returns it, or [`None`] if it is empty.
     ///
-    /// This will updated the [settings](Account#settings) of all necessary Accounts
-    /// so that the parent Account remains [valid](Account#valid)
+    /// Depending on the [Valid] provided it could make the parent `Account` [invalid](Account#valid).
+    /// Providing a `Valid::new_true()` will always result in a valid `Account` so it is recommended.
     ///
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function. [`pop`](Account::pop) in this case.
@@ -1610,10 +1609,10 @@ impl<
     ///
     /// This child `Account` settings will be added to the settings of the main `Account` that `push` was called on.
     ///
-    /// The Account will be updated with the new settings unless the inserted child `Account` is [inactive](Account::active).
+    /// If the inserted Account is [inactive](Account::active) the new settings won't be updated.
     ///
-    /// Will return an error if the child `Account` being pushed is [invalid](Account#valid) or would make the main `Account` invalid.
-    /// Use [push_unchecked](Account::push_unchecked) for better performance if its guaranteed that `Account` is valid.
+    /// Depending on the [Valid] provided it could make the parent `Account` [invalid](Account#valid).
+    /// Providing a `Valid::new_true()` will always result in a valid `Account` so it is recommended.
     ///
     /// # Panics
     ///
@@ -1673,6 +1672,9 @@ impl<
     /// Part of the [deep functions](Account#deep-functions) group that accept a `Vec` of &N to identify
     /// the child `Account` to run the function. [`push`](Account::push) in this case.
     ///
+    /// Depending on the [Valid] provided it could make the parent `Account` [invalid](Account#valid).
+    /// Providing a `Valid::new_true()` will always result in a valid `Account` so it is recommended.
+    /// 
     /// # Errors
     ///
     /// Deep functions can return [`DeepError`]'s
@@ -1855,6 +1857,8 @@ impl<
 ///
 ///
 /// `Valid` is also used in certain methods in `Account` that interact with it's `valid` field.
+/// 
+/// A `Valid::default()` `Valid::new_true()` and `Valid::new(true, true, true)` are equivalent.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[must_use]
