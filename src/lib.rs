@@ -33,6 +33,112 @@
 //!
 //! 2. Having to internally do a [`HashMap`](std::collections::HashMap)'s .get() will most likely be slower than alternatives.
 //!
+//! ## Example
+//!
+//! ```rust
+/*!
+// imports
+use hashmap_settings::prelude::*;
+use std::collections::HashMap;
+
+//creating the Parent Account
+let mut account = Account::<
+    String, //Account's name
+    &str, //HashMap<K,V> K key
+    Stg  //HashMap<K,v> V value
+    >::default();
+
+// inserting child Accounts
+account.push(
+    Account::new(
+        "Default".to_string(), //Name of the Account
+        true,//is the account active
+        HashMap::from([
+            ("lines", 3.stg()), // .stg() turns a type into the type abstraction Stg
+            ("word_repetition", 10.stg()),
+            ("word", "default".to_string().stg()),
+        ]), //settings
+        vec![], //child Accounts
+    ),
+    Valid::new_true(), // not relevant for this example and can be ignored.
+);
+
+account.push(
+    Account::new(
+        "Global Settings".to_string(),
+        true,
+        HashMap::from([
+            ("word_repetition", 2.stg()),
+            ("word", "global".to_string().stg()),
+        ]), //this account is in a layer above the "Default" Account, so it's values will have priority
+        vec![],
+    ),
+    Valid::new_true(),
+);// we could be getting this from a database
+
+account.push(
+    Account::new(
+        "Local Settings".to_string(),
+        true,
+        HashMap::from([("word", "local".to_string().stg())]),
+        //this account is in a layer that's above "Default" and "Global Settings" Accounts,
+        //so it's values will have priority over it
+        vec![],
+    ),
+    Valid::new_true(),
+);// we could be getting this Account from a local file
+
+account.push(
+    Account::new(
+        "Inactive Account".to_string(),
+        false, //this account is inactive so its settings will be ignored.
+        HashMap::from([("word", "inactive".to_string().stg())]),
+        vec![],
+    ),
+    Valid::new_true(),
+);
+
+//getting values from the account
+let word: String = account.get(&"word").unstg()?;
+let word_repetition = account.get(&"word_repetition").unstg()?;
+let lines =account.get(&"lines").unstg()?;
+
+//example of using the values
+let mut sentence = String::new();
+for _ in 0..word_repetition {
+    sentence.push_str(&word);
+    sentence.push(' ');
+}
+sentence.pop();
+for _ in 0..lines {
+    println!("{sentence}");
+}
+//this will print the following:
+/*
+local local
+local local
+local local
+*/
+
+//values in child accounts are still accessible
+let ref_child_account: &Account<_, _, _> = account
+    .deep(&mut vec![&"Default".to_string()])
+    .unwrap();
+let inactive_word: String = ref_child_account.get(&"word").unstg()?;
+println!("{inactive_word}");
+//this will print "default"
+
+//this includes inactive accounts
+let ref_child_account: &Account<_, _, _> = account
+    .deep(&mut vec![&"Inactive Account".to_string()])
+    .unwrap();
+let inactive_word: String = ref_child_account.get(&"word").unstg()?;
+println!("{inactive_word}");
+//this will print "inactive"
+# Ok::<(), StgError>(())
+
+*/
+//!```
 //! ## How to use
 //!
 //! This crate relies on the nightly feature [dyn trait upcasting](https://github.com/rust-lang/rust/issues/65991)
@@ -78,11 +184,12 @@ mod tests {
 
     use crate::{
         account::Account,
+        prelude::Valid,
         stg::{Setting, Stg, StgError, StgTrait},
     };
 
     #[test]
-    fn doc_example() -> Result<(), StgError> {
+    fn stg_example() -> Result<(), StgError> {
         // # use hashmap_settings::Account;
 
         //creating a basic account
@@ -103,6 +210,100 @@ mod tests {
             "It's {today_bool} that today is a wonderful day,
     the grass is {grass_color} and I can see {trees} trees in the distance"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn doc_example() -> Result<(), StgError> {
+        //creating the Parent Account
+        let mut account = Account::<String, &str, Stg>::default();
+
+        //inserting child Accounts
+        account.push(
+            Account::new(
+                "Default".to_string(), //Name of the Account
+                true,                  //is the account active
+                HashMap::from([
+                    ("lines", 3.stg()),
+                    ("word_repetition", 10.stg()),
+                    ("word", "default".to_string().stg()),
+                ]), //settings
+                vec![],                //child Accounts
+            ),
+            Valid::new_true(),
+        );
+
+        account.push(
+            Account::new(
+                "Global Settings".to_string(),
+                true,
+                HashMap::from([
+                    ("word_repetition", 2.stg()),
+                    ("word", "global".to_string().stg()),
+                ]), //this account is in a layer above the "Default" Account, so it's values will have priority
+                vec![],
+            ),
+            Valid::new_true(),
+        ); // we could be getting this from a database
+
+        account.push(
+            Account::new(
+                "Local Settings".to_string(),
+                true,
+                HashMap::from([("word", "local".to_string().stg())]),
+                //this account is in a layer that's above "Default" and "Global Settings" Accounts,
+                //so it's values will have priority over it
+                vec![],
+            ),
+            Valid::new_true(),
+        ); // we could be getting this Account from a local file
+
+        account.push(
+            Account::new(
+                "Inactive Account".to_string(),
+                false, //this account is inactive so its settings will be ignored.
+                HashMap::from([("word", "inactive".to_string().stg())]),
+                vec![],
+            ),
+            Valid::new_true(),
+        );
+
+        //getting values from the account
+        let word: String = account.get(&"word").unstg()?;
+        let word_repetition = account.get(&"word_repetition").unstg()?;
+        let lines = account.get(&"lines").unstg()?;
+
+        //example of using the values
+        let mut sentence = String::new();
+        for _ in 0..word_repetition {
+            sentence.push_str(&word);
+            sentence.push(' ');
+        }
+        sentence.pop();
+        for _ in 0..lines {
+            println!("{sentence}");
+        }
+        //this will print the following:
+        /*
+        local local
+        local local
+        local local
+        */
+
+        //values in child accounts are still accessible
+        let ref_child_account: &Account<_, _, _> =
+            account.deep(&mut vec![&"Default".to_string()]).unwrap();
+        let inactive_word: String = ref_child_account.get(&"word").unstg()?;
+        println!("{inactive_word}");
+        //this will print "default"
+
+        //this includes inactive accounts
+        let ref_child_account: &Account<_, _, _> = account
+            .deep(&mut vec![&"Inactive Account".to_string()])
+            .unwrap();
+        let inactive_word: String = ref_child_account.get(&"word").unstg()?;
+        println!("{inactive_word}");
+        //this will print "inactive"
         Ok(())
     }
     #[test]
