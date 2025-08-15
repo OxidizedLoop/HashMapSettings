@@ -1294,7 +1294,7 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
                         !self
                             .settings
                             .insert(setting.to_owned(), value.clone())
-                            .map_or(false, |x| &x == value),
+                            .is_some_and(|x| &x == value),
                     );
                 }
             }
