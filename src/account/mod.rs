@@ -1285,7 +1285,7 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     /// ```
     ///  //TODO(Example)
     /// ```
-    #[must_use]
+    #[must_use = "if return value isn't needed use update_setting() instead"]
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active {
