@@ -262,7 +262,7 @@ impl<N, K, V> Account<N, K, V> {
     /// );
     ///
     /// ```
-    pub fn new_unchecked(
+    pub const fn new_unchecked(
         name: N,
         active: bool,
         settings: HashMap<K, V>,
@@ -332,7 +332,7 @@ impl<N, K, V> Account<N, K, V> {
     /// assert!(account.active());
     ///
     /// ```
-    pub fn change_activity(&mut self, new_active: bool) -> bool {
+    pub const fn change_activity(&mut self, new_active: bool) -> bool {
         if self.active() == new_active {
             false
         } else {
@@ -500,7 +500,7 @@ impl<N, K, V> Account<N, K, V> {
     /// assert_eq!(account.len(), 3);
     /// ```
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.accounts.len()
     }
     /// Returns `true` if the `Vec` of child `Accounts` contains no elements.
@@ -518,7 +518,7 @@ impl<N, K, V> Account<N, K, V> {
     /// assert!(!account.is_empty());
     /// ```
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.accounts.is_empty()
     }
     /// Returns a mutable reference to a child `Account`
@@ -592,7 +592,7 @@ impl<N, K, V> Account<N, K, V> {
     /// assert_eq!(account.rename("New Name".to_string()), "Old Name".to_string());
     /// assert_eq!(account.name(), "New Name");
     /// ```
-    pub fn rename(&mut self, new_name: N) -> N {
+    pub const fn rename(&mut self, new_name: N) -> N {
         core::mem::replace(&mut self.name, new_name)
     }
 }
