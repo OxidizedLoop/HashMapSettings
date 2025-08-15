@@ -333,6 +333,7 @@ mod tests {
         #[cfg(feature = "serde")]
         use serde::{Deserialize, Serialize};
 
+        #[allow(dead_code)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         #[allow(clippy::derive_partial_eq_without_eq)]
         #[derive(Clone, Debug, PartialEq)]

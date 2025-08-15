@@ -56,6 +56,7 @@ use serde::{Deserialize, Serialize};
 /// # #[cfg(feature = "serde")]
 /// # use serde::{Deserialize, Serialize};
 /// #
+/// # #[allow(dead_code)]
 /// # #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// # #[derive(Clone, Debug, PartialEq)]
 /// # pub struct MyType{}
