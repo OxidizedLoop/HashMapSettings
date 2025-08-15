@@ -865,7 +865,7 @@ impl<N, K: Eq + Hash, V: PartialEq> Account<N, K, V> {
         for setting in hash_set {
             if self.get_in_sub_accounts(setting) != self.get(setting) {
                 return false;
-            };
+            }
         }
         true
     }
