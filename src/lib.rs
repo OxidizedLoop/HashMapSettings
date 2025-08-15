@@ -16,22 +16,22 @@
 //! ### Benefits
 //!
 //! 1. Having multiple places changing the same setting with the value being taken from the place that is deemed
-//! to have the most importance.
-//! (eg: Default, Themes, Extensions, Global Settings, OS Settings, Device Settings, Temporary Settings )
+//!    to have the most importance.
+//!    (eg: Default, Themes, Extensions, Global Settings, OS Settings, Device Settings, Temporary Settings )
 //!
 //! 2. Organization of Settings. Given that an `Account` can hold accounts, and they can hold accounts of they own, its possible for
-//! small groups of settings to be organized in an `Account`, making it more convenient to locate a setting, or display a group of settings.
-//! Important to notice that this organization doesn't need to be (but could be) enforced in all held accounts equally.
+//!    small groups of settings to be organized in an `Account`, making it more convenient to locate a setting, or display a group of settings.
+//!    Important to notice that this organization doesn't need to be (but could be) enforced in all held accounts equally.
 //!
 //! 3. `Account`s can be individually [deactivated](crate::account::Account#active) allowing for a developer (or a user)
-//! to group settings in an `Account` and easily ignore them under certain conditions.
+//!    to group settings in an `Account` and easily ignore them under certain conditions.
 //!
 //! ### Drawbacks
 //!
 //! 1. Each `Account` holds a copy of the settings present in it's child Accounts, so there is a memory cost, but its
-//! [planned](https://github.com/OxidizedLoop/HashMapSettings/issues/28) for it to be changed to a reference to the value instead.
+//!    [planned](https://github.com/OxidizedLoop/HashMapSettings/issues/28) for it to be changed to a reference to the value instead.
 //!
-//! 2. Having to internally do a [`HashMap`](std::collections::HashMap)'s .get() will most likely be slower than alternatives.
+//! 2. Having to internally do a [`HashMap`](std::collections::HashMap)'s `.get()` will most likely be slower than alternatives.
 //!
 //! ## Example
 //!
