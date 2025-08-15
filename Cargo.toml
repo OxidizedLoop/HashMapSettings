@@ -25,7 +25,7 @@ clippy.cargo = "warn"
 clippy.complexity = "warn"
 clippy.correctness = "warn"
 clippy.pedantic = "warn"
-clippy.doc_markdown = "allow"
+clippy.doc_markdown = { level = "allow" , priority = 1 } #https://rust-lang.github.io/rust-clippy/master/index.html#lint_groups_priority
 clippy.nursery = "warn"
 clippy.perf = "warn"
 #clippy.restriction = "warn" should to be individually added 
