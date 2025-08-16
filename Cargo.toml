@@ -32,6 +32,3 @@ clippy.perf = "warn"
 clippy.style = "warn"
 clippy.suspicious = "warn"
 rust.missing_docs = "warn"
-
-[unstable]
-trait_upcasting = true

@@ -1,4 +1,4 @@
-# HashMapSettings [![Version]][Crates.io] [![Rust Version]][Nightly] [![Documentation]][Docs.rs] [![Build Status]][Actions]
+# HashMapSettings [![Version]][Crates.io] [![Documentation]][Docs.rs] [![Build Status]][Actions]
 
 [Version]: https://img.shields.io/crates/v/hashmap_settings.svg
 [Crates.io]: https://crates.io/crates/hashmap_settings
@@ -6,8 +6,6 @@
 [Docs.rs]: https://docs.rs/hashmap_settings
 [Build Status]: https://img.shields.io/github/actions/workflow/status/OxidizedLoop/HashMapSettings/rust.yml
 [Actions]: https://github.com/OxidizedLoop/HashMapSettings/actions
-[Rust Version]: https://img.shields.io/badge/rust-nightly-lightgray.svg
-[Nightly]: https://github.com/rust-lang/rust/issues/65991
 
 ## `HashMap` wrapper for layered settings
 
@@ -152,10 +150,6 @@ println!("{inactive_word}");
 ```
 
 ## How to use
-
-This crate relies on the nightly feature [dyn trait upcasting](https://github.com/rust-lang/rust/issues/65991)
-that was supposed to be stable in rust 1.76.0, unfortunately it has been [delayed](https://github.com/rust-lang/rust/pull/120233)
-so currently the nightly compiler is required.
 
 Add the following line to your Cargo.toml:
 

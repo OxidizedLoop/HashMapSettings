@@ -141,10 +141,6 @@ println!("{inactive_word}");
 //!```
 //! ## How to use
 //!
-//! This crate relies on the nightly feature [dyn trait upcasting](https://github.com/rust-lang/rust/issues/65991)
-//! that was supposed to be stable in rust 1.76.0, unfortunately it has been [delayed](https://github.com/rust-lang/rust/pull/120233)
-//! so currently the nightly compiler is required.
-//!
 //! Add the following line to your Cargo.toml:
 //!
 //! ```toml
@@ -159,7 +155,6 @@ println!("{inactive_word}");
 //! use hashmap_settings::prelude::*;
 //! ```
 
-#![feature(trait_upcasting)]
 #![doc(test(attr(deny(warnings))))] //no warnings in tests
 /// [`Account`] and other related elements.
 pub mod account;
