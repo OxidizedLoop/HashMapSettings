@@ -2,7 +2,7 @@
 name = "hashmap_settings"
 version = "0.6.0"
 authors = ["OxidizedLoop"]
-edition = "2021"
+edition = "2024"
 description = "HashMap wrapper for layered Settings"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/OxidizedLoop/HashMapSettings"
