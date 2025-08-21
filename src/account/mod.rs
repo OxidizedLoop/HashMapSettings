@@ -840,11 +840,10 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     }
     fn get_in_sub_accounts(&self, setting: &K) -> Option<&V> {
         for account in (0..self.len()).rev() {
-            if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].settings.get(setting) {
+            if self.accounts[account].active
+                && let Some(value) = self.accounts[account].settings.get(setting) {
                     return Some(value);
                 }
-            }
         }
         None
     }
@@ -888,12 +887,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     /// ```
     pub fn update_setting(&mut self, setting: &K) {
         for account in (0..self.len()).rev() {
-            if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].settings.get(setting) {
+            if self.accounts[account].active
+                && let Some(value) = self.accounts[account].settings.get(setting) {
                     self.settings.insert(setting.to_owned(), value.clone());
                     return;
                 }
-            }
         }
         self.settings.remove(setting);
     }
@@ -912,12 +910,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     pub fn update_vec(&mut self, settings: &Vec<&K>) {
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
-                if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].settings.get(*setting) {
+                if self.accounts[account].active
+                    && let Some(value) = self.accounts[account].settings.get(*setting) {
                         self.settings.insert((*setting).to_owned(), value.clone());
                         continue 'setting;
                     }
-                }
             }
             self.settings.remove(*setting);
         }
@@ -942,12 +939,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
             .collect::<Vec<_>>();
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
-                if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
+                if self.accounts[account].active
+                    && let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
                         self.settings.insert(setting.clone(), value.clone());
                         continue 'setting;
                     }
-                }
             }
             self.settings.remove(&setting);
         }
@@ -971,12 +967,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
         'setting: for setting in all_settings {
             //update settings on self account
             for account in (0..self.len()).rev() {
-                if self.accounts[account].active {
-                    if let Some(value) = self.accounts[account].settings.get(&setting) {
+                if self.accounts[account].active
+                    && let Some(value) = self.accounts[account].settings.get(&setting) {
                         self.settings.insert(setting, value.clone());
                         continue 'setting;
                     }
-                }
             }
         }
         self.valid.settings = true;
@@ -1288,8 +1283,8 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     #[must_use = "if return value isn't needed use update_setting() instead"]
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
-            if self.accounts[account].active {
-                if let Some(value) = self.accounts[account].settings.get(setting) {
+            if self.accounts[account].active
+                && let Some(value) = self.accounts[account].settings.get(setting) {
                     return Some(
                         !self
                             .settings
@@ -1297,7 +1292,6 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
                             .is_some_and(|x| &x == value),
                     );
                 }
-            }
         }
         self.settings.remove(setting).map(|_| true)
     }

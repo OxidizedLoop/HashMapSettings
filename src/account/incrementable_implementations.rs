@@ -101,33 +101,32 @@ impl Incrementable for String {
         let mut chars = self.chars().rev();
         let mut position: u32 = 2;
         let mut r_value = Self::new();
-        if chars.nth(0) == Some(')') {
-            if let Some(char) = chars.nth(0) {
-                if char.is_ascii_digit() {
-                    loop {
-                        match chars.nth(0) {
-                            Some(x) if x.is_ascii_digit() => {
-                                position.increment_mut();
-                                continue;
-                            }
-                            Some('(') => (),
-                            Some(_) | None => break,
-                        }
-                        //add number
-                        let (name, number) = self.rsplit_once('(').unwrap();
-                        let number: i32 = number
-                            .trim_end_matches(')')
-                            .parse::<i32>()
-                            .unwrap() //safe unwrap, or we wouldn't reach this point
-                            .increment();
-                        r_value = name.to_string() + "(" + &number.to_string() + ")";
-                        break;
+        if chars.nth(0) == Some(')')
+            && let Some(char) = chars.nth(0)
+            && char.is_ascii_digit()
+        {
+            loop {
+                match chars.nth(0) {
+                    Some(x) if x.is_ascii_digit() => {
+                        position.increment_mut();
+                        continue;
                     }
-                    if !r_value.is_empty() {
-                        *self = r_value;
-                        return;
-                    }
+                    Some('(') => (),
+                    Some(_) | None => break,
                 }
+                //add number
+                let (name, number) = self.rsplit_once('(').unwrap();
+                let number: i32 = number
+                    .trim_end_matches(')')
+                    .parse::<i32>()
+                    .unwrap() //safe unwrap, or we wouldn't reach this point
+                    .increment();
+                r_value = name.to_string() + "(" + &number.to_string() + ")";
+                break;
+            }
+            if !r_value.is_empty() {
+                *self = r_value;
+                return;
             }
         }
         self.push_str("(1)");
@@ -135,28 +134,27 @@ impl Incrementable for String {
     fn increment(&self) -> Self {
         let mut chars = self.chars().rev();
         let mut position: u32 = 2;
-        if chars.nth(0) == Some(')') {
-            if let Some(char) = chars.nth(0) {
-                if char.is_ascii_digit() {
-                    loop {
-                        match chars.nth(0) {
-                            Some(x) if x.is_ascii_digit() => {
-                                position.increment_mut();
-                                continue;
-                            }
-                            Some('(') => (),
-                            Some(_) | None => break,
-                        }
-                        //add number
-                        let (name, number) = self.rsplit_once('(').unwrap();
-                        let number: i32 = number
-                            .trim_end_matches(')')
-                            .parse::<i32>()
-                            .unwrap() //safe unwrap, or we wouldn't reach this point
-                            .increment();
-                        return name.to_string() + "(" + &number.to_string() + ")";
+        if chars.nth(0) == Some(')')
+            && let Some(char) = chars.nth(0)
+            && char.is_ascii_digit()
+        {
+            loop {
+                match chars.nth(0) {
+                    Some(x) if x.is_ascii_digit() => {
+                        position.increment_mut();
+                        continue;
                     }
+                    Some('(') => (),
+                    Some(_) | None => break,
                 }
+                //add number
+                let (name, number) = self.rsplit_once('(').unwrap();
+                let number: i32 = number
+                    .trim_end_matches(')')
+                    .parse::<i32>()
+                    .unwrap() //safe unwrap, or we wouldn't reach this point
+                    .increment();
+                return name.to_string() + "(" + &number.to_string() + ")";
             }
         }
         let mut r_value = self.clone();
