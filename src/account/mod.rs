@@ -3,7 +3,7 @@ pub mod incrementable_implementations;
 
 use core::{fmt::Debug, mem::replace};
 use std::{
-    collections::{hash_map, HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map},
     hash::Hash,
     option::Option,
 };
@@ -55,7 +55,7 @@ use crate::stg::Setting;
 ///
 /// An `Account's` name is used to identify an Account in multiple methods involving [child `Accounts`](Account#accounts) .
 ///
-/// For this reason child `Accounts` need to be uniquely named for the parent `Account` to be [valid](Account#valid) and `N` 
+/// For this reason child `Accounts` need to be uniquely named for the parent `Account` to be [valid](Account#valid) and `N`
 /// is required to implement the [Incrementable] trait automatically increments the name in case of repetition.
 ///
 ///
@@ -841,9 +841,10 @@ impl<N, K: Eq + Hash, V> Account<N, K, V> {
     fn get_in_sub_accounts(&self, setting: &K) -> Option<&V> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active
-                && let Some(value) = self.accounts[account].settings.get(setting) {
-                    return Some(value);
-                }
+                && let Some(value) = self.accounts[account].settings.get(setting)
+            {
+                return Some(value);
+            }
         }
         None
     }
@@ -888,10 +889,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
     pub fn update_setting(&mut self, setting: &K) {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active
-                && let Some(value) = self.accounts[account].settings.get(setting) {
-                    self.settings.insert(setting.to_owned(), value.clone());
-                    return;
-                }
+                && let Some(value) = self.accounts[account].settings.get(setting)
+            {
+                self.settings.insert(setting.to_owned(), value.clone());
+                return;
+            }
         }
         self.settings.remove(setting);
     }
@@ -911,10 +913,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active
-                    && let Some(value) = self.accounts[account].settings.get(*setting) {
-                        self.settings.insert((*setting).to_owned(), value.clone());
-                        continue 'setting;
-                    }
+                    && let Some(value) = self.accounts[account].settings.get(*setting)
+                {
+                    self.settings.insert((*setting).to_owned(), value.clone());
+                    continue 'setting;
+                }
             }
             self.settings.remove(*setting);
         }
@@ -940,10 +943,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
         'setting: for setting in settings {
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active
-                    && let Some(value) = self.accounts[account].settings.get(&setting.clone()) {
-                        self.settings.insert(setting.clone(), value.clone());
-                        continue 'setting;
-                    }
+                    && let Some(value) = self.accounts[account].settings.get(&setting.clone())
+                {
+                    self.settings.insert(setting.clone(), value.clone());
+                    continue 'setting;
+                }
             }
             self.settings.remove(&setting);
         }
@@ -968,10 +972,11 @@ impl<N, K: Clone + Eq + Hash, V: Clone> Account<N, K, V> {
             //update settings on self account
             for account in (0..self.len()).rev() {
                 if self.accounts[account].active
-                    && let Some(value) = self.accounts[account].settings.get(&setting) {
-                        self.settings.insert(setting, value.clone());
-                        continue 'setting;
-                    }
+                    && let Some(value) = self.accounts[account].settings.get(&setting)
+                {
+                    self.settings.insert(setting, value.clone());
+                    continue 'setting;
+                }
             }
         }
         self.valid.settings = true;
@@ -1284,14 +1289,15 @@ impl<N, K: Clone + Eq + Hash, V: Clone + PartialEq> Account<N, K, V> {
     pub fn update_setting_returns(&mut self, setting: &K) -> Option<bool> {
         for account in (0..self.len()).rev() {
             if self.accounts[account].active
-                && let Some(value) = self.accounts[account].settings.get(setting) {
-                    return Some(
-                        !self
-                            .settings
-                            .insert(setting.to_owned(), value.clone())
-                            .is_some_and(|x| &x == value),
-                    );
-                }
+                && let Some(value) = self.accounts[account].settings.get(setting)
+            {
+                return Some(
+                    !self
+                        .settings
+                        .insert(setting.to_owned(), value.clone())
+                        .is_some_and(|x| &x == value),
+                );
+            }
         }
         self.settings.remove(setting).map(|_| true)
     }
@@ -1594,11 +1600,8 @@ impl<N: Clone + Eq + Hash + Incrementable, K: Clone + Eq + Hash, V: Clone + Part
         self.valid.children = true;
     }
 }
-impl<
-        N: Clone + Eq + Hash + Incrementable + PartialEq,
-        K: Clone + Eq + Hash,
-        V: Clone + PartialEq,
-    > Account<N, K, V>
+impl<N: Clone + Eq + Hash + Incrementable + PartialEq, K: Clone + Eq + Hash, V: Clone + PartialEq>
+    Account<N, K, V>
 {
     /// Appends an `Account` to the back of the `Vec` of child `Accounts`.
     ///
@@ -1669,7 +1672,7 @@ impl<
     ///
     /// Depending on the [Valid] provided it could make the parent `Account` [invalid](Account#valid).
     /// Providing a `Valid::new_true()` will always result in a valid `Account` so it is recommended.
-    /// 
+    ///
     /// # Errors
     ///
     /// Deep functions can return [`DeepError`]'s
@@ -1819,10 +1822,10 @@ impl<N: PartialEq, K: Eq + Hash, V: PartialEq> PartialEq for Account<N, K, V> {
 #[cfg(feature = "serde")]
 #[cfg_attr(feature = "serde", typetag::serialize)]
 impl<
-        N: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
-        K: Setting + Clone + Debug + Eq + Hash + Serialize + for<'a> Deserialize<'a>,
-        V: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
-    > Setting for Account<N, K, V>
+    N: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
+    K: Setting + Clone + Debug + Eq + Hash + Serialize + for<'a> Deserialize<'a>,
+    V: Setting + Clone + Debug + PartialEq + Serialize + for<'a> Deserialize<'a>,
+> Setting for Account<N, K, V>
 {
     fn typetag_deserialize(&self) {
         //todo!(figure what this is supposed to do as its not mut, and returns "()")
@@ -1831,10 +1834,10 @@ impl<
 
 #[cfg(not(feature = "serde"))]
 impl<
-        N: Setting + Clone + Debug + PartialEq,
-        K: Setting + Clone + Debug + Eq + Hash,
-        V: Setting + Clone + Debug + PartialEq,
-    > Setting for Account<N, K, V>
+    N: Setting + Clone + Debug + PartialEq,
+    K: Setting + Clone + Debug + Eq + Hash,
+    V: Setting + Clone + Debug + PartialEq,
+> Setting for Account<N, K, V>
 {
 }
 
@@ -1852,7 +1855,7 @@ impl<
 ///
 ///
 /// `Valid` is also used in certain methods in `Account` that interact with it's `valid` field.
-/// 
+///
 /// A `Valid::default()` `Valid::new_true()` and `Valid::new(true, true, true)` are equivalent.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
